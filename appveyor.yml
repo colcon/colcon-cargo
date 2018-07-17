@@ -1,0 +1,15 @@
+version: '{build}'
+environment:
+  matrix:
+    - PYTHON: "C:\\Python36-x64"
+install:
+  - "%PYTHON%\\python.exe -m pip install -U setuptools"
+  # install_requires
+  - "%PYTHON%\\python.exe -m pip install -U git+https://github.com/colcon/colcon-core"
+  - "%PYTHON%\\python.exe -m pip install -U git+https://github.com/colcon/colcon-library-path"
+  # tests_require, except pyenchant
+  - "%PYTHON%\\python.exe -m pip install -U flake8-blind-except flake8-builtins flake8-class-newline flake8-comprehensions flake8-deprecated flake8-docstrings flake8-quotes pep8-naming pylint pytest pytest-cov"
+build: off
+test_script:
+  # invoke pytest
+  - "%PYTHON%\\python.exe -m pytest --cov=colcon_cmake --cov-branch"
