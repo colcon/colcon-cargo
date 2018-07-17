@@ -12,4 +12,4 @@ install:
 build: off
 test_script:
   # invoke pytest
-  - "%PYTHON%\\python.exe -m pytest --cov=colcon_cmake --cov-branch"
+  - "%PYTHON%\\python.exe -m pytest --cov=colcon_cargo --cov-branch"
