@@ -10,6 +10,7 @@ from colcon_core.environment_variable import EnvironmentVariable
 CARGO_COMMAND_ENVIRONMENT_VARIABLE = EnvironmentVariable(
     'CARGO_COMMAND', 'The full path to the Cargo executable')
 
+
 def which_executable(environment_variable, executable_name):
     """
     Determine the path of an executable.
@@ -23,6 +24,7 @@ def which_executable(environment_variable, executable_name):
     if value:
         return value
     return shutil.which(executable_name)
+
 
 CARGO_EXECUTABLE = which_executable(
     CARGO_COMMAND_ENVIRONMENT_VARIABLE.name, 'cargo')

@@ -1,9 +1,6 @@
 # Copyright 2018 Easymov Robotics
 # Licensed under the Apache License, Version 2.0
 
-import os
-from pathlib import Path
-import re
 import toml
 
 from colcon_core.package_identification \
@@ -66,6 +63,7 @@ def extract_data(cargo_toml):
 
     return data
 
+
 def extract_project_name(content):
     """
     Extract the Cargo project name from the Cargo.toml file.
@@ -77,7 +75,7 @@ def extract_project_name(content):
     try:
         return content['package']['name']
     except KeyError:
-        return None 
+        return None
 
 
 def extract_dependencies(content):
@@ -89,4 +87,3 @@ def extract_dependencies(content):
     :rtype: list
     """
     return list(content['dependencies'].keys())
-

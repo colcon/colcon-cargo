@@ -8,7 +8,6 @@ from colcon_core.event.test import TestFailure
 from colcon_core.logging import colcon_logger
 from colcon_core.plugin_system import satisfies_version
 from colcon_core.shell import get_command_environment
-from colcon_core.subprocess import check_output
 from colcon_core.task import check_call
 from colcon_core.task import TaskExtensionPoint
 
@@ -37,8 +36,6 @@ class CargoTestTask(TaskExtensionPoint):
         test_results_path = os.path.join(args.build_base, 'test_results')
         os.makedirs(test_results_path, exist_ok=True)
 
-        print(" ".join([CARGO_EXECUTABLE, 'test', '--target-dir', test_results_path]))
-
         try:
             env = await get_command_environment(
                 'test', args.build_base, self.context.dependencies)
@@ -52,7 +49,8 @@ class CargoTestTask(TaskExtensionPoint):
         # invoke cargo test
         rc = await check_call(
             self.context,
-            [CARGO_EXECUTABLE, 'test', '-q', '--target-dir', test_results_path],
+            [CARGO_EXECUTABLE, 'test', '-q',
+                '--target-dir', test_results_path],
             cwd=args.path, env=env)
 
         if rc.returncode:

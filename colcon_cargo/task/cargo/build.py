@@ -1,10 +1,8 @@
 # Copyright 2018 Easymov Robotics
 # Licensed under the Apache License, Version 2.0
 
-import ast
 import os
 from pathlib import Path
-import re
 
 from colcon_cargo.task.cargo import CARGO_EXECUTABLE
 from colcon_core.logging import colcon_logger
@@ -54,7 +52,8 @@ class CargoBuildTask(TaskExtensionPoint):
             return rc.returncode
 
         additional_hooks = create_environment_hook(
-            'cargo_{}_path'.format(pkg.name), Path(args.install_base), pkg.name,
+            'cargo_{}_path'.format(pkg.name),
+            Path(args.install_base), pkg.name,
             'PATH', os.path.join(args.install_base, 'bin'), mode='prepend')
 
         if not skip_hook_creation:
@@ -75,6 +74,6 @@ class CargoBuildTask(TaskExtensionPoint):
             CARGO_EXECUTABLE, 'install', '--force', '-q',
             '--path', args.path,
             '--root', args.install_base]
-        
+
         return await check_call(
             self.context, cmd, cwd=args.build_base, env=env)
