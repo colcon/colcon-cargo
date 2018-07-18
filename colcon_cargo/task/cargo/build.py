@@ -32,7 +32,7 @@ class CargoBuildTask(TaskExtensionPoint):
             'e.g. --cargo-args " --help"')
 
     async def build(
-        self, *, additional_hooks=None, skip_hook_creation=False
+        self, *, additional_hooks=[], skip_hook_creation=False
     ):  # noqa: D102
         pkg = self.context.pkg
         args = self.context.args
@@ -51,10 +51,10 @@ class CargoBuildTask(TaskExtensionPoint):
         if rc and rc.returncode:
             return rc.returncode
 
-        additional_hooks = create_environment_hook(
+        additional_hooks += create_environment_hook(
             'cargo_{}_path'.format(pkg.name),
             Path(args.install_base), pkg.name,
-            'PATH', os.path.join(args.install_base, 'bin'), mode='prepend')
+            'PATH', os.path.join('lib', self.context.pkg.name, 'bin'), mode='prepend')
 
         if not skip_hook_creation:
             create_environment_scripts(
@@ -67,13 +67,15 @@ class CargoBuildTask(TaskExtensionPoint):
 
         env['CARGO_TARGET_DIR'] = args.build_base
 
+        root_dir = os.path.join(args.install_base, 'lib', self.context.pkg.name)
+
         # invoke build step
         if CARGO_EXECUTABLE is None:
             raise RuntimeError("Could not find 'cargo' executable")
         cmd = [
             CARGO_EXECUTABLE, 'install', '--force', '-q',
             '--path', args.path,
-            '--root', args.install_base]
+            '--root', root_dir]
 
         return await check_call(
             self.context, cmd, cwd=args.build_base, env=env)
