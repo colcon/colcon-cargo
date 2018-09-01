@@ -5,6 +5,7 @@ import toml
 
 from colcon_core.package_identification \
     import PackageIdentificationExtensionPoint
+from colcon_core.dependency_descriptor import DependencyDescriptor
 from colcon_core.plugin_system import satisfies_version
 
 
@@ -33,8 +34,11 @@ class CargoPackageIdentification(PackageIdentificationExtensionPoint):
         metadata.type = 'cargo'
         if metadata.name is None:
             metadata.name = data['name']
-        metadata.dependencies['build'] |= data['depends']
-        metadata.dependencies['run'] |= data['depends']
+
+        dependencies = set(DependencyDescriptor(name)
+                           for name in data['depends'])
+        metadata.dependencies['build'] |= dependencies
+        metadata.dependencies['run'] |= dependencies
 
 
 def extract_data(cargo_toml):
