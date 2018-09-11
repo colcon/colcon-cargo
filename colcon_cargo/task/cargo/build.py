@@ -5,11 +5,10 @@ import os
 from pathlib import Path
 
 from colcon_cargo.task.cargo import CARGO_EXECUTABLE
+from colcon_core.environment import create_environment_scripts
 from colcon_core.logging import colcon_logger
 from colcon_core.plugin_system import satisfies_version
-from colcon_core.shell import get_command_environment
-from colcon_core.shell import create_environment_hook
-from colcon_core.environment import create_environment_scripts
+from colcon_core.shell import create_environment_hook, get_command_environment
 from colcon_core.task import check_call
 from colcon_core.task import TaskExtensionPoint
 
@@ -54,7 +53,8 @@ class CargoBuildTask(TaskExtensionPoint):
         additional_hooks += create_environment_hook(
             'cargo_{}_path'.format(pkg.name),
             Path(args.install_base), pkg.name,
-            'PATH', os.path.join('lib', self.context.pkg.name, 'bin'), mode='prepend')
+            'PATH', os.path.join('lib', self.context.pkg.name, 'bin'),
+            mode='prepend')
 
         if not skip_hook_creation:
             create_environment_scripts(
@@ -67,7 +67,8 @@ class CargoBuildTask(TaskExtensionPoint):
 
         env['CARGO_TARGET_DIR'] = args.build_base
 
-        root_dir = os.path.join(args.install_base, 'lib', self.context.pkg.name)
+        root_dir = os.path.join(args.install_base, 'lib',
+                                self.context.pkg.name)
 
         # invoke build step
         if CARGO_EXECUTABLE is None:

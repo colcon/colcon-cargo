@@ -1,11 +1,10 @@
 # Copyright 2018 Easymov Robotics
 # Licensed under the Apache License, Version 2.0
 
-import toml
-
 from colcon_core.package_identification \
     import PackageIdentificationExtensionPoint
 from colcon_core.plugin_system import satisfies_version
+import toml
 
 
 class CargoPackageIdentification(PackageIdentificationExtensionPoint):
