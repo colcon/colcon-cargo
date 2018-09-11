@@ -14,6 +14,7 @@ CARGO_COMMAND_ENVIRONMENT_VARIABLE = EnvironmentVariable(
 def which_executable(environment_variable, executable_name):
     """
     Determine the path of an executable.
+
     An environment variable can be used to override the location instead of
     relying on searching the PATH.
     :param str environment_variable: The name of the environment variable
