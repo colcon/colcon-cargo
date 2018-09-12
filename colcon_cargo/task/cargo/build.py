@@ -67,8 +67,8 @@ class CargoBuildTask(TaskExtensionPoint):
 
         env['CARGO_TARGET_DIR'] = args.build_base
 
-        root_dir = os.path.join(args.install_base, 'lib',
-                                self.context.pkg.name)
+        root_dir = os.path.join(
+            args.install_base, 'lib', self.context.pkg.name)
 
         # invoke build step
         if CARGO_EXECUTABLE is None:
