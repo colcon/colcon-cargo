@@ -9,7 +9,7 @@ from colcon_core.environment import create_environment_scripts
 from colcon_core.logging import colcon_logger
 from colcon_core.plugin_system import satisfies_version
 from colcon_core.shell import create_environment_hook, get_command_environment
-from colcon_core.task import check_call
+from colcon_core.task import run
 from colcon_core.task import TaskExtensionPoint
 
 logger = colcon_logger.getChild(__name__)
@@ -78,5 +78,5 @@ class CargoBuildTask(TaskExtensionPoint):
             '--path', args.path,
             '--root', root_dir]
 
-        return await check_call(
+        return await run(
             self.context, cmd, cwd=args.build_base, env=env)
