@@ -8,7 +8,7 @@ from colcon_core.event.test import TestFailure
 from colcon_core.logging import colcon_logger
 from colcon_core.plugin_system import satisfies_version
 from colcon_core.shell import get_command_environment
-from colcon_core.task import check_call
+from colcon_core.task import run
 from colcon_core.task import TaskExtensionPoint
 
 logger = colcon_logger.getChild(__name__)
@@ -47,7 +47,7 @@ class CargoTestTask(TaskExtensionPoint):
             raise RuntimeError("Could not find 'cargo' executable")
 
         # invoke cargo test
-        rc = await check_call(
+        rc = await run(
             self.context,
             [CARGO_EXECUTABLE, 'test', '-q',
                 '--target-dir', test_results_path],
