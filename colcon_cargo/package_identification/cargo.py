@@ -1,6 +1,10 @@
 # Copyright 2018 Easymov Robotics
 # Licensed under the Apache License, Version 2.0
 
+from collections.abc import MutableMapping
+from typing import Optional, List
+from pathlib import Path
+
 from colcon_core.package_identification \
     import PackageIdentificationExtensionPoint
 from colcon_core.plugin_system import satisfies_version
@@ -36,12 +40,11 @@ class CargoPackageIdentification(PackageIdentificationExtensionPoint):
         metadata.dependencies['run'] |= data['depends']
 
 
-def extract_data(cargo_toml):
+def extract_data(cargo_toml: Path) -> Optional[dict]:
     """
     Extract the project name and dependencies from a Cargo.toml file.
 
-    :param Path corgo_toml: The path of the Cargo.toml file
-    :rtype: dict
+    :param corgo_toml: The path of the Cargo.toml file
     """
     content = {}
 
@@ -63,13 +66,12 @@ def extract_data(cargo_toml):
     return data
 
 
-def extract_project_name(content):
+def extract_project_name(content: MutableMapping) -> Optional[str]:
     """
     Extract the Cargo project name from the Cargo.toml file.
 
-    :param str content: The Cargo.toml parsed dictionnary
+    :param content: The Cargo.toml parsed dictionnary
     :returns: The project name, otherwise None
-    :rtype: str
     """
     try:
         return content['package']['name']
@@ -77,12 +79,14 @@ def extract_project_name(content):
         return None
 
 
-def extract_dependencies(content):
+def extract_dependencies(content: MutableMapping) -> List[str]:
     """
     Extract the dependencies from the Cargo.toml file.
 
-    :param str content: The Cargo.toml parsed dictionnary
-    :returns: The dependencies name
-    :rtype: list
+    :param content: The Cargo.toml parsed dictionnary
+    :returns: Packages listed in the dependencies section
     """
-    return list(content['dependencies'].keys())
+    try:
+        list(content['dependencies'].keys())
+    except KeyError:
+        return []
