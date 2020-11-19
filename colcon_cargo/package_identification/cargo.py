@@ -44,7 +44,7 @@ def extract_data(cargo_toml: Path) -> Optional[dict]:
     """
     Extract the project name and dependencies from a Cargo.toml file.
 
-    :param corgo_toml: The path of the Cargo.toml file
+    :param cargo_toml: The path of the Cargo.toml file
     """
     content = {}
 
