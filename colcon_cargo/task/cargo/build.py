@@ -30,9 +30,9 @@ class CargoBuildTask(TaskExtensionPoint):
             'Arguments matching other options must be prefixed by a space,\n'
             'e.g. --cargo-args " --help"')
 
-    async def build(
+    async def build(  # noqa: D102
         self, *, additional_hooks=[], skip_hook_creation=False
-    ):  # noqa: D102
+    ):
         pkg = self.context.pkg
         args = self.context.args
 
