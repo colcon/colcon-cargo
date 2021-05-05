@@ -26,7 +26,7 @@ def check_files(paths):
                 continue
             lines = content.splitlines()
             has_copyright = \
-                any(l for l in lines if l.startswith('# Copyright'))
+                any(line for line in lines if line.startswith('# Copyright'))
             has_license = \
                 '# Licensed under the Apache License, Version 2.0' in lines
             if not has_copyright or not has_license:
