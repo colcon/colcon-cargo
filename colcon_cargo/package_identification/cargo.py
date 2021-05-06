@@ -5,10 +5,13 @@ from collections.abc import MutableMapping
 from typing import Optional, List
 from pathlib import Path
 
+from colcon_core.logging import colcon_logger
 from colcon_core.package_identification \
     import PackageIdentificationExtensionPoint
 from colcon_core.plugin_system import satisfies_version
 import toml
+
+logger = colcon_logger.getChild(__name__)
 
 
 class CargoPackageIdentification(PackageIdentificationExtensionPoint):
@@ -29,9 +32,10 @@ class CargoPackageIdentification(PackageIdentificationExtensionPoint):
             return
 
         data = extract_data(cargo_toml)
-        if not data['name'] and not metadata.name:
+        if not data:
             raise RuntimeError(
-                "Failed to extract project name from '%s'" % cargo_toml)
+                'Failed to extract Rust package information from "%s"'
+                % cargo_toml.absolute())
 
         metadata.type = 'cargo'
         if metadata.name is None:
@@ -47,17 +51,18 @@ def extract_data(cargo_toml: Path) -> Optional[dict]:
     :param cargo_toml: The path of the Cargo.toml file
     """
     content = {}
-
     try:
         content = toml.load(str(cargo_toml))
-        data = {}
-        data['name'] = extract_project_name(content)
     except toml.TomlDecodeError:
-        pass
+        logger.error('Decoding error when processing "%s"'
+                     % cargo_toml.absolute())
+        return
 
-    # fall back to use the directory name
-    if data['name'] is None:
-        data['name'] = cargo_toml.parent.name
+    # set the project name - fall back to use the directory name
+    data = {}
+    toml_name_attr = extract_project_name(content)
+    data['name'] = toml_name_attr if toml_name_attr is not None else \
+        cargo_toml.parent.name
 
     depends = extract_dependencies(content)
     # exclude self references
