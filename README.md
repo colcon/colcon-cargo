@@ -2,5 +2,5 @@
 
 [![CI](https://github.com/colcon/colcon-cargo/actions/workflows/ci.yml/badge.svg)](https://github.com/colcon/colcon-cargo/actions/workflows/ci.yml)
 
-An extension for `colcon-core <https://github.com/colcon/colcon-core>`_ to
+An extension for [colcon-core](https://github.com/colcon/colcon-core) to
 support Rust projects built with Cargo.
