@@ -5,30 +5,73 @@
 An extension for [colcon-core](https://github.com/colcon/colcon-core) to
 support Rust projects built with Cargo.
 
-## Basic Set Up
-This introduction assumes the following dependencies are already installed:
-- python >= 3.5
-- rust/cargo are installed
-- colcon (comes with ros2 core distribution)
+## Install
 
-#### Install colcon_cargo
-`pip install -U git+https://github.com/colcon/colcon-cargo.git`
-#### Create two cargo crates
-Navigate to a workspace where you want to start creating packages and run the following commands:
-```
-cargo new hello_world
-cargo new hello_world_2
+`pip3 install --user --upgrade git+https://github.com/colcon/colcon-cargo.git`
+
+## Usage / Minimal example
+
+<details>
+<summary>Build a sample workspace</summary>
+<br>
+
+```sh
+$ mkdir ws/
+$ cd ws/
+$ cargo init hello_world
+$ cargo init hello_world2
+$ tree .
+
+.
+├── hello-world
+│   ├── Cargo.toml
+│   └── src
+│       └── main.rs
+└── hello-world2
+    ├── Cargo.toml
+    └── src
+        └── main.rs
+
+4 directories, 4 files
+
 ```
 
-#### Build with colcon
-```colcon build```
+</details>
 
-You should get output that looks like this:
+Verify that cargo detects the rust packages:
+
+```sh
+$ colcon list
+
+hello-world     hello-world     (cargo)
+hello-world2    hello-world2    (cargo)
 ```
+
+Build them with cargo:
+
+```sh
+$ colcon build
+
 Starting >>> hello_world
 Starting >>> hello_world_2
 Finished <<< hello_world_2 [1.84s]
 Finished <<< hello_world [1.94s]
 
 Summary: 2 packages finished [2.34s]
+
+# source and run the executables.
 ```
+
+Source the generated `install/` directory and execute:
+
+```sh
+$ source install/setup.bash
+$ hello-world
+
+Hello, world!
+
+$ hello-world2
+
+Hello, world!
+```
+
