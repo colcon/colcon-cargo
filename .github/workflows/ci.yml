@@ -1,26 +1,31 @@
-name: CI
+name: Run tests
+
 on:
   push:
-    branches:
-      - master
+    branches: ['master']
   pull_request:
 
 jobs:
-  ci:
-    strategy:
-      fail-fast: true
-      matrix:
-        python-version: [3.8]
-        os: [ubuntu-20.04]
-    runs-on: ${{ matrix.os }}
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      strategy: ${{steps.load.outputs.strategy}}
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: colcon/ci
+      - id: load
+        run: echo "::set-output name=strategy::$(echo $(cat strategy.json))"
+
+  pytest:
+    needs: [setup]
+    strategy: ${{fromJson(needs.setup.outputs.strategy)}}
+    runs-on: ${{matrix.os}}
+
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install Prerequisites
-        run: ./scripts/install-prereqs.sh
-      - name: Run tests
-        run: pytest
-      - name: Build a Rust package via colcon
-        run: ./scripts/build-rust-package.sh
+          python-version: ${{matrix.python}}
+      - uses: colcon/ci@v1
