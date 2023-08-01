@@ -60,7 +60,7 @@ def extract_data(cargo_toml):
     #print('hre is the content')
     #print(content)
     if 'workspace' in content.keys():
-        print("ah mais c'est unworkspace en fait")
+        #print("ah mais c'est unworkspace en fait")
         return WORKSPACE
     # set the project name - fall back to use the directory name
     data = {}
