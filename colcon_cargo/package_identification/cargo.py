@@ -8,7 +8,7 @@ from colcon_core.plugin_system import satisfies_version
 import toml
 
 logger = colcon_logger.getChild(__name__)
-
+WORKSPACE="WORKSPACE"
 
 class CargoPackageIdentification(PackageIdentificationExtensionPoint):
     """Identify Cargo packages with `Cargo.toml` files."""
@@ -28,6 +28,8 @@ class CargoPackageIdentification(PackageIdentificationExtensionPoint):
             return
 
         data = extract_data(cargo_toml)
+        if data == WORKSPACE:
+            return
         if not data:
             raise RuntimeError(
                 'Failed to extract Rust package information from "%s"'
@@ -54,6 +56,9 @@ def extract_data(cargo_toml):
         logger.error('Decoding error when processing "%s"'
                      % cargo_toml.absolute())
         return
+
+    if 'workspace' in content.keys():
+        return WORKSPACE
 
     # set the project name - fall back to use the directory name
     data = {}
