@@ -90,4 +90,4 @@ def extract_dependencies(content):
     :returns: The dependencies name
     :rtype: list
     """
-    return list(content['dependencies'].keys())
+    return list(content.get('dependencies', {}).keys())
