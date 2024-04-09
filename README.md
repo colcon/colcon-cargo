@@ -1,6 +1,6 @@
 # colcon-cargo
 
-[![CI](https://github.com/colcon/colcon-cargo/actions/workflows/ci.yml/badge.svg)](https://github.com/colcon/colcon-cargo/actions/workflows/ci.yml)
+[![CI](https://github.com/colcon/colcon-cargo/actions/workflows/ci.yaml/badge.svg?branch=main&event=push)](https://github.com/colcon/colcon-cargo/actions/workflows/ci.yaml?query=branch%3Amain+event%3Apush)
 
 An extension for [colcon-core](https://github.com/colcon/colcon-core) to
 support Rust projects built with Cargo.
