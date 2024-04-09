@@ -8,7 +8,8 @@ from colcon_core.plugin_system import satisfies_version
 import toml
 
 logger = colcon_logger.getChild(__name__)
-WORKSPACE="WORKSPACE"
+WORKSPACE = 'WORKSPACE'
+
 
 class CargoPackageIdentification(PackageIdentificationExtensionPoint):
     """Identify Cargo packages with `Cargo.toml` files."""
