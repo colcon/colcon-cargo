@@ -23,6 +23,10 @@ class CargoPackageIdentification(PackageIdentificationExtensionPoint):
     def identify(self, metadata):  # noqa: D102
         if metadata.type is not None and metadata.type != 'cargo':
             return
+        
+        cmakelists = metadata.path / 'CMakeLists.txt'
+        if cmakelists.is_file():
+            return
 
         cargo_toml = metadata.path / 'Cargo.toml'
         if not cargo_toml.is_file():
