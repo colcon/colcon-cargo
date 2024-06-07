@@ -4,8 +4,11 @@
 from pathlib import Path
 import sys
 
+import pytest
 
-def test_copyright_licence():
+
+@pytest.mark.linter
+def test_copyright_license():
     missing = check_files([Path(__file__).parents[1]])
     assert not len(missing), \
         'In some files no copyright / license line was found'
@@ -25,8 +28,8 @@ def check_files(paths):
             if not content:
                 continue
             lines = content.splitlines()
-            has_copyright = \
-                any(line for line in lines if line.startswith('# Copyright'))
+            has_copyright = any(filter(
+                lambda line: line.startswith('# Copyright'), lines))
             has_license = \
                 '# Licensed under the Apache License, Version 2.0' in lines
             if not has_copyright or not has_license:
