@@ -8,7 +8,7 @@ import shutil
 import tempfile
 from types import SimpleNamespace
 
-from colcon_cargo.package_identification.cargo import CargoPackageIdentification
+from colcon_cargo.package_identification.cargo import CargoPackageIdentification  # noqa: E501
 from colcon_cargo.task.cargo.build import CargoBuildTask
 from colcon_core.event_handler.console_direct import ConsoleDirectEventHandler
 from colcon_core.package_descriptor import PackageDescriptor
@@ -16,7 +16,8 @@ from colcon_core.subprocess import new_event_loop
 from colcon_core.task import TaskContext
 import pytest
 
-test_project_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'rust-sample-package')
+test_project_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                 'rust-sample-package')
 
 
 @pytest.fixture(autouse=True)
@@ -25,7 +26,7 @@ def monkey_patch_put_event_into_queue(monkeypatch):
     monkeypatch.setattr(
         TaskContext,
         'put_event_into_queue',
-        lambda self, event: event_handler((event, 'cmake')),
+        lambda self, event: event_handler((event, 'cargo')),
     )
 
 
@@ -56,15 +57,15 @@ def test_build_package():
             tmpdir = Path(tmpdir)
             # TODO(luca) Also test clean build and cargo args
             context = TaskContext(pkg=package,
-                args=SimpleNamespace(
-                    path=str(test_project_path),
-                    build_base=str(tmpdir / 'build'),
-                    install_base=str(tmpdir / 'install'),
-                    clean_build=None,
-                    cargo_args=None,
-                ),
-                dependencies={}
-            )
+                                  args=SimpleNamespace(
+                                      path=str(test_project_path),
+                                      build_base=str(tmpdir / 'build'),
+                                      install_base=str(tmpdir / 'install'),
+                                      clean_build=None,
+                                      cargo_args=None,
+                                  ),
+                                  dependencies={}
+                                  )
 
             task = CargoBuildTask()
             task.set_context(context=context)
