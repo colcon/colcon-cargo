@@ -1,5 +1,5 @@
 [package]
-name = "rust-sample-app"
+name = "rust-sample-package"
 version = "0.1.0"
 authors = ["Nikos Koukis <nickkouk@gmail.com>"]
 edition = "2018"
