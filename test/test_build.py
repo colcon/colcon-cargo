@@ -41,9 +41,6 @@ def test_package_identification():
 @pytest.mark.skipif(
     not shutil.which('cargo'),
     reason='Rust must be installed to run this test')
-@pytest.mark.skipif(
-    os.name == 'nt' and 'VisualStudioVersion' not in os.environ,
-    reason='Must be run from a developer command prompt')
 def test_build_package():
     event_loop = new_event_loop()
     asyncio.set_event_loop(event_loop)
