@@ -2,7 +2,6 @@
 # Licensed under the Apache License, Version 2.0
 
 import asyncio
-import os
 from pathlib import Path
 import shutil
 import tempfile
@@ -16,8 +15,7 @@ from colcon_core.subprocess import new_event_loop
 from colcon_core.task import TaskContext
 import pytest
 
-test_project_path = Path(os.path.dirname(os.path.realpath(__file__))) / \
-                         'rust-sample-package'
+test_project_path = Path(__file__).parent / 'rust-sample-package'
 
 
 @pytest.fixture(autouse=True)
