@@ -16,8 +16,8 @@ from colcon_core.subprocess import new_event_loop
 from colcon_core.task import TaskContext
 import pytest
 
-test_project_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                 'rust-sample-package')
+test_project_path = Path(os.path.dirname(os.path.realpath(__file__))) / \
+                         'rust-sample-package'
 
 
 @pytest.fixture(autouse=True)
