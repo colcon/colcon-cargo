@@ -70,7 +70,7 @@ def test_build_package():
             task = CargoBuildTask()
             task.set_context(context=context)
 
-            src_base = Path(task.context.args.path + '/src')
+            src_base = test_project_path / 'src'
 
             source_files_before = set(src_base.rglob('*'))
             rc = event_loop.run_until_complete(task.build())
