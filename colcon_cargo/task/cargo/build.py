@@ -134,6 +134,18 @@ class CargoBuildTask(TaskExtensionPoint):
 
     # Overridden by colcon-ros-cargo
     def _build_cmd(self, cargo_args):
+        """
+        Get the build command for Cargo.
+
+        This method is intended to be overridden by colcon-ros-cargo.
+        It returns the command to run 'cargo install' with the provided arguments.
+
+        Args:
+            cargo_args: Additional arguments to pass to Cargo.
+
+        Returns:
+            A list containing the Cargo build command and its arguments.
+        """
         args = self.context.args
         return [
             CARGO_EXECUTABLE, 'install',
