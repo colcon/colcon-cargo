@@ -20,7 +20,25 @@ class CargoArgcompleteCompleter(ArgcompleteCompleterExtensionPoint):
             ArgcompleteCompleterExtensionPoint.EXTENSION_POINT_VERSION, '^1.0')
 
     def get_completer(self, parser, *args, **kwargs):  # noqa: D102
-        if '--cargo-args' not in args:
+        """
+        Get the completer for Cargo arguments.
+
+        This method checks if the '--cargo-args' argument is present in the provided arguments.
+        If it is, it tries to import the ChoicesCompleter from the argcomplete package and returns
+        an instance of it with an empty list of choices. If the '--cargo-args' argument is not
+        present or the argcomplete package is not installed, it returns None.
+
+        Args:
+            parser: The argument parser.
+            *args: Positional arguments passed to the method.
+            **kwargs: Keyword arguments passed to the method.
+
+        Returns:
+            ChoicesCompleter or None: An instance of ChoicesCompleter with an empty list of choices,
+            or None if the '--cargo-args' argument is not present or the argcomplete package is not
+            installed.
+        """
+        if "--cargo-args" not in args:
             return None
 
         try:
