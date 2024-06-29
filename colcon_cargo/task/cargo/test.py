@@ -18,6 +18,11 @@ class CargoTestTask(TaskExtensionPoint):
     """Test Cargo packages."""
 
     def __init__(self):  # noqa: D107
+        """
+        Initialize the CargoTestTask.
+
+        This method calls the __init__ method of the parent class TaskExtensionPoint.
+        """
         super().__init__()
         satisfies_version(TaskExtensionPoint.EXTENSION_POINT_VERSION, '^1.0')
 
