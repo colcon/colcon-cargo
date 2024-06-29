@@ -38,6 +38,19 @@ class CargoTestTask(TaskExtensionPoint):
         pass
 
     async def test(self, *, additional_hooks=None):  # noqa: D102
+        """
+        Test the Cargo package.
+
+        This method runs the 'cargo test' command to test the Cargo package specified
+        in the context. It sets up the necessary environment, runs the test command,
+        and handles the test results.
+
+        Args:
+            additional_hooks: Additional hooks to be executed.
+
+        Returns:
+            An integer return code. 0 indicates success, and a non-zero value indicates failure.
+        """
         pkg = self.context.pkg
         args = self.context.args
 
