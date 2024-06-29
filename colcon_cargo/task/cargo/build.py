@@ -52,6 +52,20 @@ class CargoBuildTask(TaskExtensionPoint):
     async def build(  # noqa: D102
         self, *, additional_hooks=None, skip_hook_creation=False
     ):
+        """
+        Build the Cargo package.
+
+        This method builds the Cargo package specified in the context. It sets up
+        the necessary environment, prepares the build directory, invokes the build
+        command, and creates environment scripts if requested.
+
+        Args:
+            additional_hooks: Additional hooks to be executed.
+            skip_hook_creation: Whether to skip creating environment hooks.
+
+        Returns:
+            An integer return code. 0 indicates success, and a non-zero value indicates failure.
+        """
         if additional_hooks is None:
             additional_hooks = []
         args = self.context.args
