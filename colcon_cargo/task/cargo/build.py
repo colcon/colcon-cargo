@@ -115,6 +115,16 @@ class CargoBuildTask(TaskExtensionPoint):
 
     # Overridden by colcon-ros-cargo
     def _prepare(self, env, additional_hooks):
+        """
+        Prepare the build environment.
+
+        This method is intended to be overridden by colcon-ros-cargo.
+        It creates an environment hook for the package's PATH.
+
+        Args:
+            env: The environment to prepare.
+            additional_hooks: Additional hooks to be executed.
+        """
         pkg = self.context.pkg
         additional_hooks += create_environment_hook(
             'cargo_{}_path'.format(pkg.name),
