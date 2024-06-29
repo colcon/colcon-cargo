@@ -27,6 +27,14 @@ class CargoTestTask(TaskExtensionPoint):
         satisfies_version(TaskExtensionPoint.EXTENSION_POINT_VERSION, '^1.0')
 
     def add_arguments(self, *, parser):  # noqa: D102
+        """
+        Add command-line arguments for the CargoTestTask.
+
+        This method is currently empty and does not add any arguments.
+
+        Args:
+            parser: The argument parser to add arguments to.
+        """
         pass
 
     async def test(self, *, additional_hooks=None):  # noqa: D102
