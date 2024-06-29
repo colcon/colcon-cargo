@@ -29,6 +29,15 @@ class CargoBuildTask(TaskExtensionPoint):
         satisfies_version(TaskExtensionPoint.EXTENSION_POINT_VERSION, '^1.0')
 
     def add_arguments(self, *, parser):  # noqa: D102
+        """
+        Add command-line arguments for the CargoBuildTask.
+
+        This method adds arguments to the parser for passing arguments to Cargo
+        projects and for cleaning the build directory before the build.
+
+        Args:
+            parser: The argument parser to add arguments to.
+        """
         parser.add_argument(
             '--cargo-args',
             nargs='*', metavar='*', type=str.lstrip,
