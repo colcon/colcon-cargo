@@ -15,6 +15,12 @@ class CargoPackageIdentification(PackageIdentificationExtensionPoint):
     """Identify Cargo packages with `Cargo.toml` files."""
 
     def __init__(self):  # noqa: D107
+        """
+        Initialize the CargoPackageIdentification.
+
+        This method calls the __init__ method of the parent class PackageIdentificationExtensionPoint
+        and checks the version compatibility.
+        """
         super().__init__()
         satisfies_version(
             PackageIdentificationExtensionPoint.EXTENSION_POINT_VERSION,
