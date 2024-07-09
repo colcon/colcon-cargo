@@ -2,6 +2,7 @@
 # Licensed under the Apache License, Version 2.0
 
 import os
+import xml.etree.ElementTree as eTree
 
 from colcon_cargo.task.cargo import CARGO_EXECUTABLE
 from colcon_core.event.test import TestFailure
@@ -33,27 +34,111 @@ class CargoTestTask(TaskExtensionPoint):
 
         assert os.path.exists(args.build_base)
 
-        test_results_path = os.path.join(args.build_base, 'test_results')
-        os.makedirs(test_results_path, exist_ok=True)
+        test_results_path = os.path.join(args.build_base, 'cargo_test.xml')
 
         try:
             env = await get_command_environment(
                 'test', args.build_base, self.context.dependencies)
         except RuntimeError as e:
+            # TODO(luca) log this as error in the test result file
             logger.error(str(e))
             return 1
 
         if CARGO_EXECUTABLE is None:
+            # TODO(luca) log this as error in the test result file
             raise RuntimeError("Could not find 'cargo' executable")
 
-        # invoke cargo test
-        rc = await run(
-            self.context,
-            [CARGO_EXECUTABLE, 'test', '-q',
-                '--target-dir', test_results_path],
-            cwd=args.path, env=env)
+        cargo_args = args.cargo_args
+        if cargo_args is None:
+            cargo_args = []
 
-        if rc.returncode:
+        # invoke cargo test
+        unit_rc = await run(
+            self.context,
+            self._test_cmd(cargo_args),
+            cwd=args.path, env=env, capture_output=True)
+
+        doc_rc = await run(
+            self.context,
+            self._doc_test_cmd(cargo_args),
+            cwd=args.path, env=env, capture_output=True)
+
+        fmt_rc = await run(
+            self.context,
+            self._fmt_cmd(cargo_args),
+            cwd=args.path, env=env, capture_output=True)
+
+        error_report = self._create_error_report(unit_rc, doc_rc, fmt_rc)
+        with open(test_results_path, 'wb') as result_file:
+            tree = eTree.ElementTree(error_report)
+            eTree.indent(tree)
+            tree.write(result_file, encoding='utf-8', xml_declaration=True)
+
+        if unit_rc.returncode or doc_rc.returncode or fmt_rc.returncode:
             self.context.put_event_into_queue(TestFailure(pkg.name))
             # the return code should still be 0
         return 0
+
+    # Overridden by colcon-ros-cargo
+    def _test_cmd(self, cargo_args):
+        args = self.context.args
+        return [
+            CARGO_EXECUTABLE,
+            'test',
+            '--quiet',
+            '--target-dir',
+            args.build_base,
+        ] + cargo_args
+
+    def _doc_test_cmd(self, cargo_args):
+        args = self.context.args
+        return [
+            CARGO_EXECUTABLE,
+            'test',
+            '--quiet',
+            '--target-dir',
+            args.build_base,
+            '--doc',
+        ] + cargo_args
+
+    def _fmt_cmd(self, cargo_args):
+        return [
+            CARGO_EXECUTABLE,
+            'fmt',
+            '--check',
+        ] + cargo_args
+
+    def _create_error_report(self, unit_rc, doc_rc, fmt_rc) -> eTree.Element:
+        # TODO(luca) revisit when programmatic output from cargo test is
+        # stabilized, for now just have a suite for unit, doc and fmt tests
+        failures = 0
+        testsuites = eTree.Element('testsuites')
+        # TODO(luca) add time
+        testsuite = eTree.SubElement(testsuites,
+                                     'testsuite', {'name': 'cargo_test'})
+        unit_testcase = eTree.SubElement(testsuite, 'testcase',
+                                         {'name': 'unit'})
+        if unit_rc.returncode:
+            unit_failure = eTree.SubElement(unit_testcase, 'failure',
+                                            {'message': 'cargo test failed'})
+            unit_failure.text = unit_rc.stdout.decode('utf-8')
+            failures += 1
+        doc_testcase = eTree.SubElement(testsuite, 'testcase',
+                                        {'name': 'doc'})
+        if doc_rc.returncode:
+            doc_failure = \
+                eTree.SubElement(doc_testcase, 'failure',
+                                 {'message': 'cargo doc test failed'})
+            doc_failure.text = doc_rc.stdout.decode('utf-8')
+            failures += 1
+        fmt_testcase = eTree.SubElement(testsuite, 'testcase', {'name': 'fmt'})
+        if fmt_rc.returncode:
+            fmt_failure = eTree.SubElement(fmt_testcase, 'failure',
+                                           {'message': 'cargo fmt failed'})
+            fmt_failure.text = fmt_rc.stdout.decode('utf-8')
+            failures += 1
+        testsuite.attrib['errors'] = str(0)
+        testsuite.attrib['failures'] = str(failures)
+        testsuite.attrib['skipped'] = str(0)
+        testsuite.attrib['tests'] = str(3)
+        return testsuites

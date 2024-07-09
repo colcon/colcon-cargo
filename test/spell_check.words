@@ -4,7 +4,10 @@ asyncio
 autouse
 colcon
 completers
+deps
 easymov
+etree
+getroot
 iterdir
 linter
 lstrip
@@ -25,6 +28,9 @@ setuptools
 skipif
 symlink
 tempfile
+testcase
+testsuite
+testsuites
 thomas
 tmpdir
 todo

@@ -7,9 +7,11 @@ from pathlib import Path
 import shutil
 import tempfile
 from types import SimpleNamespace
+import xml.etree.ElementTree as eTree
 
 from colcon_cargo.package_identification.cargo import CargoPackageIdentification  # noqa: E501
 from colcon_cargo.task.cargo.build import CargoBuildTask
+from colcon_cargo.task.cargo.test import CargoTestTask
 from colcon_core.event_handler.console_direct import ConsoleDirectEventHandler
 from colcon_core.package_descriptor import PackageDescriptor
 from colcon_core.subprocess import new_event_loop
@@ -42,7 +44,7 @@ def test_package_identification():
 @pytest.mark.skipif(
     not shutil.which('cargo'),
     reason='Rust must be installed to run this test')
-def test_build_package():
+def test_build_and_test_package():
     event_loop = new_event_loop()
     asyncio.set_event_loop(event_loop)
 
@@ -83,5 +85,41 @@ def test_build_package():
             if os.name == 'nt':
                 app_name += '.exe'
             assert (install_base / 'bin' / app_name).is_file()
+
+            # Now compile tests
+            task = CargoTestTask()
+            task.set_context(context=context)
+
+            # Expect tests to have failed but return code will still be 0
+            # since testing run succeeded
+            rc = event_loop.run_until_complete(task.test())
+            assert not rc
+            build_base = Path(task.context.args.build_base)
+
+            # Make sure the testing files are built
+            assert (build_base / 'debug' / 'deps').is_dir()
+            assert len(os.listdir(build_base / 'debug' / 'deps')) > 0
+            result_file_path = build_base / 'cargo_test.xml'
+            assert result_file_path.is_file()
+            check_result_file(result_file_path)
+
     finally:
         event_loop.close()
+
+
+# Check the testing result file, expect cargo test and doc test to fail
+# but fmt to succeed
+def check_result_file(path):
+    tree = eTree.parse(path)
+    root = tree.getroot()
+    testsuite = root.find('testsuite')
+    assert testsuite is not None
+    unit_result = testsuite.find("testcase[@name='unit']")
+    assert unit_result is not None
+    assert unit_result.find('failure') is not None
+    doc_result = testsuite.find("testcase[@name='doc']")
+    assert doc_result is not None
+    assert doc_result.find('failure') is not None
+    fmt_result = testsuite.find("testcase[@name='fmt']")
+    assert fmt_result is not None
+    assert fmt_result.find('failure') is None
