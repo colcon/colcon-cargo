@@ -72,8 +72,7 @@ class CargoTestTask(TaskExtensionPoint):
         error_report = self._create_error_report(unit_rc, doc_rc, fmt_rc)
         with open(test_results_path, 'wb') as result_file:
             xmlstr = minidom.parseString(eTree.tostring(error_report))
-            xmlstr = xmlstr.toprettyxml(indent='    ',
-                                        encoding='utf-8', standalone=True)
+            xmlstr = xmlstr.toprettyxml(indent='    ', encoding='utf-8')
             result_file.write(xmlstr)
 
         if unit_rc.returncode or doc_rc.returncode or fmt_rc.returncode:
