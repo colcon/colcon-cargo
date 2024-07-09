@@ -2,6 +2,7 @@
 # Licensed under the Apache License, Version 2.0
 
 import os
+from xml.dom import minidom
 import xml.etree.ElementTree as eTree
 
 from colcon_cargo.task.cargo import CARGO_EXECUTABLE
@@ -70,9 +71,10 @@ class CargoTestTask(TaskExtensionPoint):
 
         error_report = self._create_error_report(unit_rc, doc_rc, fmt_rc)
         with open(test_results_path, 'wb') as result_file:
-            tree = eTree.ElementTree(error_report)
-            eTree.indent(tree)
-            tree.write(result_file, encoding='utf-8', xml_declaration=True)
+            xmlstr = minidom.parseString(eTree.tostring(error_report))
+            xmlstr = xmlstr.toprettyxml(indent='    ',
+                                        encoding='utf-8', standalone=True)
+            result_file.write(xmlstr)
 
         if unit_rc.returncode or doc_rc.returncode or fmt_rc.returncode:
             self.context.put_event_into_queue(TestFailure(pkg.name))

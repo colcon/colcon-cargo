@@ -12,6 +12,7 @@ iterdir
 linter
 lstrip
 luca
+minidom
 monkeypatch
 nargs
 noqa
@@ -35,3 +36,6 @@ thomas
 tmpdir
 todo
 toml
+toprettyxml
+tostring
+xmlstr
