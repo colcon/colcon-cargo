@@ -24,7 +24,12 @@ class CargoTestTask(TaskExtensionPoint):
         satisfies_version(TaskExtensionPoint.EXTENSION_POINT_VERSION, '^1.0')
 
     def add_arguments(self, *, parser):  # noqa: D102
-        pass
+        parser.add_argument(
+            '--cargo-args',
+            nargs='*', metavar='*', type=str.lstrip,
+            help='Pass arguments to Cargo projects. '
+            'Arguments matching other options must be prefixed by a space,\n'
+            'e.g. --cargo-args " --help"')
 
     async def test(self, *, additional_hooks=None):  # noqa: D102
         pkg = self.context.pkg
