@@ -125,6 +125,7 @@ class CargoBuildTask(TaskExtensionPoint):
             'install',
             '--force',
             '--quiet',
+            '--locked',
             '--path', args.path,
             '--root', args.install_base,
         ] + cargo_args
