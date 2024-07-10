@@ -97,9 +97,12 @@ class CargoBuildTask(TaskExtensionPoint):
     def _build_cmd(self, cargo_args):
         args = self.context.args
         return [
-            CARGO_EXECUTABLE, 'install',
-            '--force',
+            CARGO_EXECUTABLE,
+            'build',
             '--quiet',
-            '--path', args.path,
-            '--root', args.install_base,
+            '--manifest-path', args.path + '/Cargo.toml',
+            '--target-dir', args.install_base,
+            '--bins',
+            '--lib',
+            '--tests',
         ] + cargo_args

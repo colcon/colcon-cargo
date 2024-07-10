@@ -84,7 +84,7 @@ def test_build_and_test_package():
             # Executable in windows have a .exe extension
             if os.name == 'nt':
                 app_name += '.exe'
-            assert (install_base / 'bin' / app_name).is_file()
+            assert (install_base / 'debug' / app_name).is_file()
 
             # Now compile tests
             task = CargoTestTask()
