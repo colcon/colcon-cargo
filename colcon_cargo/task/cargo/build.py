@@ -80,6 +80,15 @@ class CargoBuildTask(TaskExtensionPoint):
         if rc and rc.returncode:
             return rc.returncode
 
+        cmd = self._install_cmd(cargo_args)
+
+        self.progress('install')
+
+        rc = await run(
+            self.context, cmd, cwd=self.context.pkg.path, env=env)
+        if rc and rc.returncode:
+            return rc.returncode
+
         if not skip_hook_creation:
             create_environment_scripts(
                 self.context.pkg, args, additional_hooks=additional_hooks)
@@ -96,13 +105,24 @@ class CargoBuildTask(TaskExtensionPoint):
     # Overridden by colcon-ros-cargo
     def _build_cmd(self, cargo_args):
         args = self.context.args
+        # TODO(luca) Check if we can avoid all-targets to save space
         return [
             CARGO_EXECUTABLE,
             'build',
             '--quiet',
             '--manifest-path', args.path + '/Cargo.toml',
-            '--target-dir', args.install_base,
-            '--bins',
-            '--lib',
-            '--tests',
+            '--target-dir', args.build_base,
+            '--all-targets',
+        ] + cargo_args
+
+    # Overridden by colcon-ros-cargo
+    def _install_cmd(self, cargo_args):
+        args = self.context.args
+        return [
+            CARGO_EXECUTABLE,
+            'install',
+            '--force',
+            '--quiet',
+            '--path', args.path,
+            '--root', args.install_base,
         ] + cargo_args
