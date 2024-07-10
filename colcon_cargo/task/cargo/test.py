@@ -96,7 +96,7 @@ class CargoTestTask(TaskExtensionPoint):
             'test',
             '--quiet',
             '--target-dir',
-            args.build_base,
+            args.install_base,
         ] + cargo_args + [
             '--',
             '--color=never',
@@ -109,7 +109,7 @@ class CargoTestTask(TaskExtensionPoint):
             'test',
             '--quiet',
             '--target-dir',
-            args.build_base,
+            args.install_base,
             '--doc',
         ] + cargo_args + [
             '--',

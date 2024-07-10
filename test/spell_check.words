@@ -24,6 +24,7 @@ returncode
 rglob
 rmtree
 rtype
+rustfmt
 scspell
 setuptools
 skipif
