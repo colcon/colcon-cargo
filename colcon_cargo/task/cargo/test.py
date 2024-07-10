@@ -74,7 +74,7 @@ class CargoTestTask(TaskExtensionPoint):
 
         fmt_rc = await run(
             self.context,
-            self._fmt_cmd(cargo_args),
+            self._fmt_cmd(),
             cwd=args.path, env=env, capture_output=True)
 
         error_report = self._create_error_report(unit_rc, doc_rc, fmt_rc)
@@ -97,9 +97,10 @@ class CargoTestTask(TaskExtensionPoint):
             '--quiet',
             '--target-dir',
             args.build_base,
+        ] + cargo_args + [
             '--',
             '--color=never',
-        ] + cargo_args
+        ]
 
     def _doc_test_cmd(self, cargo_args):
         args = self.context.args
@@ -110,18 +111,20 @@ class CargoTestTask(TaskExtensionPoint):
             '--target-dir',
             args.build_base,
             '--doc',
+        ] + cargo_args + [
             '--',
             '--color=never',
-        ] + cargo_args
+        ]
 
-    def _fmt_cmd(self, cargo_args):
+    # Ignore cargo args for rustfmt
+    def _fmt_cmd(self):
         return [
             CARGO_EXECUTABLE,
             'fmt',
             '--check',
             '--',
             '--color=never',
-        ] + cargo_args
+        ]
 
     def _create_error_report(self, unit_rc, doc_rc, fmt_rc) -> eTree.Element:
         # TODO(luca) revisit when programmatic output from cargo test is
