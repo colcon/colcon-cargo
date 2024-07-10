@@ -112,7 +112,6 @@ class CargoBuildTask(TaskExtensionPoint):
             CARGO_EXECUTABLE,
             'build',
             '--quiet',
-            '--manifest-path', args.path + '/Cargo.toml',
             '--target-dir', args.build_base,
             '--all-targets',
         ] + cargo_args
@@ -126,6 +125,6 @@ class CargoBuildTask(TaskExtensionPoint):
             '--force',
             '--quiet',
             '--locked',
-            '--path', args.path,
+            '--path', '.',
             '--root', args.install_base,
         ] + cargo_args
