@@ -50,6 +50,9 @@ class CargoTestTask(TaskExtensionPoint):
             logger.error(str(e))
             return 1
 
+        # Disable color to avoid escape sequences in test result file
+        env['NO_COLOR'] = '1'
+
         if CARGO_EXECUTABLE is None:
             # TODO(luca) log this as error in the test result file
             raise RuntimeError("Could not find 'cargo' executable")
@@ -94,6 +97,8 @@ class CargoTestTask(TaskExtensionPoint):
             '--quiet',
             '--target-dir',
             args.build_base,
+            '--',
+            '--color=never',
         ] + cargo_args
 
     def _doc_test_cmd(self, cargo_args):
@@ -105,6 +110,8 @@ class CargoTestTask(TaskExtensionPoint):
             '--target-dir',
             args.build_base,
             '--doc',
+            '--',
+            '--color=never',
         ] + cargo_args
 
     def _fmt_cmd(self, cargo_args):
@@ -112,6 +119,8 @@ class CargoTestTask(TaskExtensionPoint):
             CARGO_EXECUTABLE,
             'fmt',
             '--check',
+            '--',
+            '--color=never',
         ] + cargo_args
 
     def _create_error_report(self, unit_rc, doc_rc, fmt_rc) -> eTree.Element:
