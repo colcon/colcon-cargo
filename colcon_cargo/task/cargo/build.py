@@ -84,10 +84,12 @@ class CargoBuildTask(TaskExtensionPoint):
 
         self.progress('install')
 
-        rc = await run(
-            self.context, cmd, cwd=self.context.pkg.path, env=env)
-        if rc and rc.returncode:
-            return rc.returncode
+        # colcon-ros-cargo overrides install command to return None
+        if cmd is not None:
+            rc = await run(
+                self.context, cmd, cwd=self.context.pkg.path, env=env)
+            if rc and rc.returncode:
+                return rc.returncode
 
         if not skip_hook_creation:
             create_environment_scripts(
