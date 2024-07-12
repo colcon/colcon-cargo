@@ -117,9 +117,6 @@ def check_result_file(path):
     unit_result = testsuite.find("testcase[@name='unit']")
     assert unit_result is not None
     assert unit_result.find('failure') is not None
-    doc_result = testsuite.find("testcase[@name='doc']")
-    assert doc_result is not None
-    assert doc_result.find('failure') is not None
     fmt_result = testsuite.find("testcase[@name='fmt']")
     assert fmt_result is not None
     assert fmt_result.find('failure') is None

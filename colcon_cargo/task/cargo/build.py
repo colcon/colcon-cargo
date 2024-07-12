@@ -112,9 +112,6 @@ class CargoBuildTask(TaskExtensionPoint):
             'build',
             '--quiet',
             '--target-dir', args.build_base,
-            '--bins',
-            '--lib',
-            '--tests',
         ] + cargo_args
 
     # Overridden by colcon-ros-cargo

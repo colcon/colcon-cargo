@@ -68,23 +68,18 @@ class CargoTestTask(TaskExtensionPoint):
             self._test_cmd(cargo_args),
             cwd=args.path, env=env, capture_output=True)
 
-        doc_rc = await run(
-            self.context,
-            self._doc_test_cmd(cargo_args),
-            cwd=args.path, env=env, capture_output=True)
-
         fmt_rc = await run(
             self.context,
             self._fmt_cmd(),
             cwd=args.path, env=env, capture_output=True)
 
-        error_report = self._create_error_report(unit_rc, doc_rc, fmt_rc)
+        error_report = self._create_error_report(unit_rc, fmt_rc)
         with open(test_results_path, 'wb') as result_file:
             xmlstr = minidom.parseString(eTree.tostring(error_report))
             xmlstr = xmlstr.toprettyxml(indent='    ', encoding='utf-8')
             result_file.write(xmlstr)
 
-        if unit_rc.returncode or doc_rc.returncode or fmt_rc.returncode:
+        if unit_rc.returncode or fmt_rc.returncode:
             self.context.put_event_into_queue(TestFailure(pkg.name))
             # the return code should still be 0
         return 0
@@ -102,20 +97,6 @@ class CargoTestTask(TaskExtensionPoint):
             '--color=never',
         ]
 
-    def _doc_test_cmd(self, cargo_args):
-        args = self.context.args
-        return [
-            CARGO_EXECUTABLE,
-            'test',
-            '--quiet',
-            '--target-dir',
-            args.build_base,
-            '--doc',
-        ] + cargo_args + [
-            '--',
-            '--color=never',
-        ]
-
     # Ignore cargo args for rustfmt
     def _fmt_cmd(self):
         return [
@@ -126,9 +107,9 @@ class CargoTestTask(TaskExtensionPoint):
             '--color=never',
         ]
 
-    def _create_error_report(self, unit_rc, doc_rc, fmt_rc) -> eTree.Element:
+    def _create_error_report(self, unit_rc, fmt_rc) -> eTree.Element:
         # TODO(luca) revisit when programmatic output from cargo test is
-        # stabilized, for now just have a suite for unit, doc and fmt tests
+        # stabilized, for now just have a suite for unit, and fmt tests
         failures = 0
         testsuites = eTree.Element('testsuites')
         # TODO(luca) add time
@@ -141,14 +122,6 @@ class CargoTestTask(TaskExtensionPoint):
                                             {'message': 'cargo test failed'})
             unit_failure.text = unit_rc.stdout.decode('utf-8')
             failures += 1
-        doc_testcase = eTree.SubElement(testsuite, 'testcase',
-                                        {'name': 'doc'})
-        if doc_rc.returncode:
-            doc_failure = \
-                eTree.SubElement(doc_testcase, 'failure',
-                                 {'message': 'cargo doc test failed'})
-            doc_failure.text = doc_rc.stdout.decode('utf-8')
-            failures += 1
         fmt_testcase = eTree.SubElement(testsuite, 'testcase', {'name': 'fmt'})
         if fmt_rc.returncode:
             fmt_failure = eTree.SubElement(fmt_testcase, 'failure',
@@ -158,5 +131,5 @@ class CargoTestTask(TaskExtensionPoint):
         testsuite.attrib['errors'] = str(0)
         testsuite.attrib['failures'] = str(failures)
         testsuite.attrib['skipped'] = str(0)
-        testsuite.attrib['tests'] = str(3)
+        testsuite.attrib['tests'] = str(2)
         return testsuites
