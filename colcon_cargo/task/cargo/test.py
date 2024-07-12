@@ -89,7 +89,6 @@ class CargoTestTask(TaskExtensionPoint):
             # the return code should still be 0
         return 0
 
-    # Overridden by colcon-ros-cargo
     def _test_cmd(self, cargo_args):
         args = self.context.args
         return [
