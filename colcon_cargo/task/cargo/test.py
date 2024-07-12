@@ -38,7 +38,8 @@ class CargoTestTask(TaskExtensionPoint):
         logger.info(
             "Testing Cargo package in '{args.path}'".format_map(locals()))
 
-        assert os.path.exists(args.build_base)
+        assert os.path.exists(args.build_base), \
+            'Has this package been built before?'
 
         test_results_path = os.path.join(args.build_base, 'cargo_test.xml')
 

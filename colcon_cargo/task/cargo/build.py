@@ -107,13 +107,14 @@ class CargoBuildTask(TaskExtensionPoint):
     # Overridden by colcon-ros-cargo
     def _build_cmd(self, cargo_args):
         args = self.context.args
-        # TODO(luca) Check if we can avoid all-targets to save space
         return [
             CARGO_EXECUTABLE,
             'build',
             '--quiet',
             '--target-dir', args.build_base,
-            '--all-targets',
+            '--bins',
+            '--lib',
+            '--tests',
         ] + cargo_args
 
     # Overridden by colcon-ros-cargo
