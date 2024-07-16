@@ -74,3 +74,27 @@ $ hello-world2
 Hello, world!
 ```
 
+### Testing
+
+Test the packages with cargo:
+
+```sh
+$ colcon test
+Starting >>> hello_worl2
+Starting >>> hello_world
+Finished <<< hello_world [0.24s]                                           
+Finished <<< hello_worl2 [0.25s]
+
+Summary: 2 packages finished [0.39s]
+```
+
+Inspect the test results (`cargo test` and `cargo fmt --check`).
+They should all succeed for the empty templates:
+
+```sh
+$ colcon test-result --all
+build/hello_worl2/cargo_test.xml: 2 tests, 0 errors, 0 failures, 0 skipped
+build/hello_world/cargo_test.xml: 2 tests, 0 errors, 0 failures, 0 skipped
+
+Summary: 4 tests, 0 errors, 0 failures, 0 skipped
+```

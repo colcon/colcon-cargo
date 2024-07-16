@@ -32,6 +32,17 @@ class CargoTestTask(TaskExtensionPoint):
             'e.g. --cargo-args " --help"')
 
     async def test(self, *, additional_hooks=None):  # noqa: D102
+        """
+        Runs tests and style checks for the requested package.
+
+        Results are compiled into a single result `cargo_test.xml` file
+        with two test results, one for all the tests (cargo test) and one for
+        style (`cargo fmt --check`).
+        Documentation tests (`cargo test --doc`) are not implemented
+        since it is not possible to distinguish between a test that failed
+        because of a failing case and one that failed because the crate
+        contains no library target.
+        """
         pkg = self.context.pkg
         args = self.context.args
 
