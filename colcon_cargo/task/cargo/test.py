@@ -62,9 +62,6 @@ class CargoTestTask(TaskExtensionPoint):
             logger.error(str(e))
             return 1
 
-        # Disable color to avoid escape sequences in test result file
-        env['NO_COLOR'] = '1'
-
         if CARGO_EXECUTABLE is None:
             # TODO(luca) log this as error in the test result file
             raise RuntimeError("Could not find 'cargo' executable")
