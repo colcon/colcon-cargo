@@ -63,7 +63,6 @@ class CargoTestTask(TaskExtensionPoint):
             return 1
 
         if CARGO_EXECUTABLE is None:
-            # TODO(luca) log this as error in the test result file
             raise RuntimeError("Could not find 'cargo' executable")
 
         cargo_args = args.cargo_args
