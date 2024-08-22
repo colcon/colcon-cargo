@@ -1,8 +1,8 @@
 # Copyright 2018 Easymov Robotics
 # Licensed under the Apache License, Version 2.0
 
-from pathlib import Path
 import json
+from pathlib import Path
 import shutil
 
 from colcon_cargo.task.cargo import CARGO_EXECUTABLE
@@ -138,21 +138,21 @@ class CargoBuildTask(TaskExtensionPoint):
         ]
 
         rc = await run(
-            self.context, cmd, cwd=self.context.pkg.path, capture_output=True, env=env
+            self.context, cmd, cwd=self.context.pkg.path, capture_output=True, env=env  # noqa: E501
         )
         if rc is None or rc.returncode != 0:
-            raise RuntimeError("Could not inspect package using 'cargo metadata'")
+            raise RuntimeError("Could not inspect package using 'cargo metadata'")  # noqa: E501
 
         if rc.stdout is None:
-            raise RuntimeError("Failed to capture stdout from 'cargo metadata'")
+            raise RuntimeError("Failed to capture stdout from 'cargo metadata'")  # noqa: E501
 
         metadata = json.loads(rc.stdout)
         for package in metadata.get('packages', {}):
             for target in package.get('targets', {}):
                 for crate_type in target.get('crate_types', {}):
                     if crate_type == 'bin':
-                        # If any one binary exists in the package then we should
-                        # go ahead and run cargo install
+                        # If any one binary exists in the package then we
+                        # should go ahead and run cargo install
                         return True
 
         # If no binary target exists in the whole package, then skip running
