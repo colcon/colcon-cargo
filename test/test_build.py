@@ -19,8 +19,10 @@ from colcon_core.task import TaskContext
 import pytest
 
 TEST_PACKAGE_NAME = 'rust-sample-package'
+PURE_LIBRARY_PACKAGE_NAME = 'rust-pure-library'
 
 test_project_path = Path(__file__).parent / TEST_PACKAGE_NAME
+pure_library_path = Path(__file__).parent / PURE_LIBRARY_PACKAGE_NAME
 
 
 @pytest.fixture(autouse=True)
@@ -102,6 +104,43 @@ def test_build_and_test_package():
             result_file_path = build_base / 'cargo_test.xml'
             assert result_file_path.is_file()
             check_result_file(result_file_path)
+
+    finally:
+        event_loop.close()
+
+
+@pytest.mark.skipif(
+    not shutil.which('cargo'),
+    reason='Rust must be installed to run this test')
+def test_skip_pure_library_package():
+    event_loop = new_event_loop()
+    asyncio.set_event_loop(event_loop)
+
+    try:
+        cpi = CargoPackageIdentification()
+        package = PackageDescriptor(pure_library_path)
+        cpi.identify(package)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
+            # TODO(luca) Also test clean build and cargo args
+            context = TaskContext(pkg=package,
+                                  args=SimpleNamespace(
+                                      path=str(pure_library_path),
+                                      build_base=str(tmpdir / 'build'),
+                                      install_base=str(tmpdir / 'install'),
+                                      clean_build=None,
+                                      cargo_args=None,
+                                  ),
+                                  dependencies={}
+                                  )
+
+            task = CargoBuildTask()
+            task.set_context(context=context)
+
+            # Make sure the task succeeds, even though there is no binary
+            rc = event_loop.run_until_complete(task.build())
+            assert not rc
 
     finally:
         event_loop.close()
