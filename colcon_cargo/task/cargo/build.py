@@ -138,13 +138,21 @@ class CargoBuildTask(TaskExtensionPoint):
         ]
 
         rc = await run(
-            self.context, cmd, cwd=self.context.pkg.path, capture_output=True, env=env  # noqa: E501
+            self.context,
+            cmd,
+            cwd=self.context.pkg.path,
+            capture_output=True,
+            env=env
         )
         if rc is None or rc.returncode != 0:
-            raise RuntimeError("Could not inspect package using 'cargo metadata'")  # noqa: E501
+            raise RuntimeError(
+                "Could not inspect package using 'cargo metadata'"
+            )
 
         if rc.stdout is None:
-            raise RuntimeError("Failed to capture stdout from 'cargo metadata'")  # noqa: E501
+            raise RuntimeError(
+                "Failed to capture stdout from 'cargo metadata'"
+            )
 
         metadata = json.loads(rc.stdout)
         for package in metadata.get('packages', {}):
