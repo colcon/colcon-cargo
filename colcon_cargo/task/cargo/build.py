@@ -2,6 +2,7 @@
 # Licensed under the Apache License, Version 2.0
 
 from pathlib import Path
+import json
 import shutil
 
 from colcon_cargo.task.cargo import CARGO_EXECUTABLE
@@ -80,12 +81,12 @@ class CargoBuildTask(TaskExtensionPoint):
         if rc and rc.returncode:
             return rc.returncode
 
+        # colcon-ros-cargo overrides install command to return None.
+        # We also need to check if the package has any binaries, because if it
+        # has no binaries then cargo install will return an error.
         cmd = self._install_cmd(cargo_args)
-
-        self.progress('install')
-
-        # colcon-ros-cargo overrides install command to return None
-        if cmd is not None:
+        if cmd is not None and await self._has_binaries(env):
+            self.progress('install')
             rc = await run(
                 self.context, cmd, cwd=self.context.pkg.path, env=env)
             if rc and rc.returncode:
@@ -126,3 +127,34 @@ class CargoBuildTask(TaskExtensionPoint):
             '--path', '.',
             '--root', args.install_base,
         ] + cargo_args
+
+    # Identify if there are any binaries to install for the current package
+    async def _has_binaries(self, env):
+        cmd = [
+            CARGO_EXECUTABLE,
+            'metadata',
+            '--no-deps',
+            '--format-version', '1',
+        ]
+
+        rc = await run(
+            self.context, cmd, cwd=self.context.pkg.path, capture_output=True, env=env
+        )
+        if rc is None or rc.returncode != 0:
+            raise RuntimeError("Could not inspect package using 'cargo metadata'")
+
+        if rc.stdout is None:
+            raise RuntimeError("Failed to capture stdout from 'cargo metadata'")
+
+        metadata = json.loads(rc.stdout)
+        for package in metadata.get('packages', {}):
+            for target in package.get('targets', {}):
+                for crate_type in target.get('crate_types', {}):
+                    if crate_type == 'bins':
+                        # If any one binary exists in the package then we should
+                        # go ahead and run cargo install
+                        return True
+
+        # If no binary target exists in the whole package, then skip running
+        # cargo install because it would produce an error.
+        return False
