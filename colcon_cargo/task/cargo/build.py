@@ -80,6 +80,17 @@ class CargoBuildTask(TaskExtensionPoint):
         if rc and rc.returncode:
             return rc.returncode
 
+        cmd = self._install_cmd(cargo_args)
+
+        self.progress('install')
+
+        # colcon-ros-cargo overrides install command to return None
+        if cmd is not None:
+            rc = await run(
+                self.context, cmd, cwd=self.context.pkg.path, env=env)
+            if rc and rc.returncode:
+                return rc.returncode
+
         if not skip_hook_creation:
             create_environment_scripts(
                 self.context.pkg, args, additional_hooks=additional_hooks)
@@ -97,9 +108,21 @@ class CargoBuildTask(TaskExtensionPoint):
     def _build_cmd(self, cargo_args):
         args = self.context.args
         return [
-            CARGO_EXECUTABLE, 'install',
+            CARGO_EXECUTABLE,
+            'build',
+            '--quiet',
+            '--target-dir', args.build_base,
+        ] + cargo_args
+
+    # Overridden by colcon-ros-cargo
+    def _install_cmd(self, cargo_args):
+        args = self.context.args
+        return [
+            CARGO_EXECUTABLE,
+            'install',
             '--force',
             '--quiet',
-            '--path', args.path,
+            '--locked',
+            '--path', '.',
             '--root', args.install_base,
         ] + cargo_args
