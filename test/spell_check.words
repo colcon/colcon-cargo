@@ -37,6 +37,8 @@ thomas
 tmpdir
 todo
 toml
+tomli
+tomllib
 toprettyxml
 tostring
 xmlstr

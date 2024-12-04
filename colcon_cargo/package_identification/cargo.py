@@ -5,7 +5,18 @@ from colcon_core.logging import colcon_logger
 from colcon_core.package_identification \
     import PackageIdentificationExtensionPoint
 from colcon_core.plugin_system import satisfies_version
-import toml
+
+try:
+    # Python 3.11+
+    from tomllib import loads as toml_loads
+    from tomllib import TOMLDecodeError
+except ImportError:
+    try:
+        from tomli import loads as toml_loads
+        from tomli import TOMLDecodeError
+    except ImportError:
+        from toml import loads as toml_loads
+        from toml import TomlDecodeError as TOMLDecodeError
 
 logger = colcon_logger.getChild(__name__)
 WORKSPACE = 'WORKSPACE'
@@ -52,8 +63,9 @@ def extract_data(cargo_toml):
     """
     content = {}
     try:
-        content = toml.load(str(cargo_toml))
-    except toml.TomlDecodeError:
+        with cargo_toml.open('rb') as f:
+            content = toml_loads(f.read().decode())
+    except TOMLDecodeError:
         logger.error('Decoding error when processing "%s"'
                      % cargo_toml.absolute())
         return
