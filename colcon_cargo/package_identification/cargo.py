@@ -50,6 +50,8 @@ class CargoPackageIdentification(PackageIdentificationExtensionPoint):
         metadata.type = 'cargo'
         if metadata.name is None:
             metadata.name = data['name']
+        metadata.metadata['version'] = data['version']
+
         metadata.dependencies['build'] |= data['depends']
         metadata.dependencies['run'] |= data['depends']
 
@@ -78,6 +80,7 @@ def extract_data(cargo_toml):
     toml_name_attr = extract_project_name(content)
     data['name'] = toml_name_attr if toml_name_attr is not None else \
         cargo_toml.parent.name
+    data['version'] = extract_project_version(content)
 
     depends = extract_dependencies(content)
     # exclude self references
@@ -96,6 +99,20 @@ def extract_project_name(content):
     """
     try:
         return content['package']['name']
+    except KeyError:
+        return None
+
+
+def extract_project_version(content):
+    """
+    Extract the Cargo project version from the Cargo.toml file.
+
+    :param str content: The Cargo.toml parsed dictionary
+    :returns: The project version, otherwise None
+    :rtype: str
+    """
+    try:
+        return content['package']['version']
     except KeyError:
         return None
 
