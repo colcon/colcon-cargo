@@ -126,6 +126,7 @@ class CargoBuildTask(TaskExtensionPoint):
             '--locked',
             '--path', '.',
             '--root', args.install_base,
+            '--target-dir', args.build_base,
         ] + cargo_args
 
     # Identify if there are any binaries to install for the current package
