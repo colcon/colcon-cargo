@@ -108,17 +108,23 @@ class CargoBuildTask(TaskExtensionPoint):
     # Overridden by colcon-ros-cargo
     def _build_cmd(self, cargo_args):
         args = self.context.args
-        return [
+        cmd = [
             CARGO_EXECUTABLE,
             'build',
             '--quiet',
             '--target-dir', args.build_base,
-        ] + cargo_args
+        ]
+        if not any(
+            arg == '--profile' or arg.startswith('--profile=')
+            for arg in cargo_args
+        ):
+            cmd += ['--profile', 'dev']
+        return cmd + cargo_args
 
     # Overridden by colcon-ros-cargo
     def _install_cmd(self, cargo_args):
         args = self.context.args
-        return [
+        cmd = [
             CARGO_EXECUTABLE,
             'install',
             '--force',
@@ -127,7 +133,13 @@ class CargoBuildTask(TaskExtensionPoint):
             '--path', '.',
             '--root', args.install_base,
             '--target-dir', args.build_base,
-        ] + cargo_args
+        ]
+        if not any(
+            arg == '--profile' or arg.startswith('--profile=')
+            for arg in cargo_args
+        ):
+            cmd += ['--profile', 'dev']
+        return cmd + cargo_args
 
     # Identify if there are any binaries to install for the current package
     async def _has_binaries(self, env):
