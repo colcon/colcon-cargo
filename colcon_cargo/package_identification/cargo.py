@@ -19,7 +19,6 @@ except ImportError:
         from toml import TomlDecodeError as TOMLDecodeError
 
 logger = colcon_logger.getChild(__name__)
-WORKSPACE = 'WORKSPACE'
 
 
 class CargoPackageIdentification(PackageIdentificationExtensionPoint):
@@ -39,90 +38,34 @@ class CargoPackageIdentification(PackageIdentificationExtensionPoint):
         if not cargo_toml.is_file():
             return
 
-        data = extract_data(cargo_toml)
-        if data == WORKSPACE:
+        content = read_cargo_toml(cargo_toml)
+        if 'workspace' in content:
+            logger.debug(
+                f'Ignoring unsupported Cargo Workspace at {metadata.path}')
             return
-        if not data:
+
+        package = content.get('package', {})
+        name = package.get('name')
+        if not name and not metadata.name:
             raise RuntimeError(
-                'Failed to extract Rust package information from "%s"'
-                % cargo_toml.absolute())
+                f"Failed to extract project name from '{cargo_toml}'")
 
         metadata.type = 'cargo'
         if metadata.name is None:
-            metadata.name = data['name']
-        metadata.metadata['version'] = data['version']
-
-        metadata.dependencies['build'] |= data['depends']
-        metadata.dependencies['run'] |= data['depends']
+            metadata.name = name
 
 
-def extract_data(cargo_toml):
+def read_cargo_toml(cargo_toml):
     """
-    Extract the project name and dependencies from a Cargo.toml file.
+    Read the contents of a Cargo.toml file.
 
-    :param Path cargo_toml: The path of the Cargo.toml file
-    :rtype: dict
+    :param cargo_toml: Path to a Cargo.toml file to read
+    :returns: Dictionary containing the processed content of the Cargo.toml
+    :raises ValueError: if the content of Cargo.toml is not valid
     """
-    content = {}
     try:
         with cargo_toml.open('rb') as f:
-            content = toml_loads(f.read().decode())
-    except TOMLDecodeError:
-        logger.error('Decoding error when processing "%s"'
-                     % cargo_toml.absolute())
-        return
-
-    if 'workspace' in content.keys():
-        return WORKSPACE
-
-    # set the project name - fall back to use the directory name
-    data = {}
-    toml_name_attr = extract_project_name(content)
-    data['name'] = toml_name_attr if toml_name_attr is not None else \
-        cargo_toml.parent.name
-    data['version'] = extract_project_version(content)
-
-    depends = extract_dependencies(content)
-    # exclude self references
-    data['depends'] = set(depends) - {data['name']}
-
-    return data
-
-
-def extract_project_name(content):
-    """
-    Extract the Cargo project name from the Cargo.toml file.
-
-    :param str content: The Cargo.toml parsed dictionary
-    :returns: The project name, otherwise None
-    :rtype: str
-    """
-    try:
-        return content['package']['name']
-    except KeyError:
-        return None
-
-
-def extract_project_version(content):
-    """
-    Extract the Cargo project version from the Cargo.toml file.
-
-    :param str content: The Cargo.toml parsed dictionary
-    :returns: The project version, otherwise None
-    :rtype: str
-    """
-    try:
-        return content['package']['version']
-    except KeyError:
-        return None
-
-
-def extract_dependencies(content):
-    """
-    Extract the dependencies from the Cargo.toml file.
-
-    :param str content: The Cargo.toml parsed dictionary
-    :returns: The dependencies name
-    :rtype: list
-    """
-    return list(content.get('dependencies', {}).keys())
+            return toml_loads(f.read().decode())
+    except TOMLDecodeError as e:
+        raise ValueError(
+            f"Failed to parse Cargo.toml file at '{cargo_toml}'") from e
