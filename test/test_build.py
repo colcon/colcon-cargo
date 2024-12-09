@@ -9,6 +9,7 @@ import tempfile
 from types import SimpleNamespace
 import xml.etree.ElementTree as eTree
 
+from colcon_cargo.package_augmentation.cargo import CargoPackageAugmentation
 from colcon_cargo.package_identification.cargo import CargoPackageIdentification  # noqa: E501
 from colcon_cargo.task.cargo.build import CargoBuildTask
 from colcon_cargo.task.cargo.test import CargoTestTask
@@ -41,6 +42,21 @@ def test_package_identification():
     cpi.identify(desc)
     assert desc.type == 'cargo'
     assert desc.name == TEST_PACKAGE_NAME
+
+
+def test_package_augmentation():
+    cpi = CargoPackageIdentification()
+    aug = CargoPackageAugmentation()
+    desc = PackageDescriptor(pure_library_path)
+    cpi.identify(desc)
+    aug.augment_package(desc)
+    print(desc)
+    assert desc.metadata['version'] == '0.1.0'
+    assert len(desc.metadata['maintainers']) == 1
+    assert desc.metadata['maintainers'][0] == 'Test<test@test.com>'
+    assert len(desc.dependencies['build']) == 1
+    assert 'either' in desc.dependencies['build']
+    assert desc.dependencies['run'] == desc.dependencies['build']
 
 
 @pytest.mark.skipif(
