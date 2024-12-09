@@ -56,7 +56,7 @@ def extract_dependencies(content):
     """
     Get the dependencies of a Cargo package.
 
-    :param content: The dictionary content of the Cargo.tml file
+    :param content: The dictionary content of the Cargo.toml file
     :returns: The dependencies
     :rtype: dict(string, set(DependencyDescriptor))
     """
