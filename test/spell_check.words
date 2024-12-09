@@ -4,6 +4,7 @@ asyncio
 autouse
 colcon
 completers
+dependee
 deps
 easymov
 etree
@@ -41,4 +42,5 @@ tomli
 tomllib
 toprettyxml
 tostring
+wildcards
 xmlstr
