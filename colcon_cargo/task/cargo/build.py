@@ -10,6 +10,8 @@ from colcon_core.environment import create_environment_scripts
 from colcon_core.logging import colcon_logger
 from colcon_core.plugin_system import satisfies_version
 from colcon_core.shell import create_environment_hook, get_command_environment
+from colcon_core.task import create_file
+from colcon_core.task import install
 from colcon_core.task import run
 from colcon_core.task import TaskExtensionPoint
 
@@ -95,6 +97,11 @@ class CargoBuildTask(TaskExtensionPoint):
                 self.context, cmd, cwd=pkg.path, env=env)
             if rc and rc.returncode:
                 return rc.returncode
+
+        if self._has_libraries(metadata, pkg.name):
+            self.progress('package')
+            await self._install_package(
+                metadata['packages'][0]['version'], env)
 
         if not skip_hook_creation:
             create_environment_scripts(
@@ -197,3 +204,82 @@ class CargoBuildTask(TaskExtensionPoint):
         # If no binary target exists in the whole package, then skip running
         # cargo install because it would produce an error.
         return False
+
+    # Identify if there are any libraries to install for the current package
+    @staticmethod
+    def _has_libraries(metadata, package_name):
+        for package in metadata.get('packages', {}):
+            # If the package is part of a cargo workspace, the metadata
+            # contains all members. We're only interested in our target
+            # package - ignore the other workspace members here.
+            if package.get('name') != package_name:
+                continue
+            for target in package.get('targets', {}):
+                if {
+                    'lib',
+                    'rlib',
+                    'proc-macro',
+                }.intersection(target.get('crate_types', ())):
+                    # If any one binary exists in the package then we
+                    # should go ahead and install the extracted crate
+                    return True
+
+        # If no library target exists in the whole package, then skip extracted
+        # crate installation because it isn't useful.
+        return False
+
+    # Determine what files would be part of a packaged crate
+    async def _get_crate_contents(self, env):
+        pkg = self.context.pkg
+        cmd = [
+            CARGO_EXECUTABLE,
+            'package',
+            '--list',
+            '--allow-dirty',
+            '--quiet',
+            '--package', pkg.name,
+        ]
+
+        rc = await run(
+            self.context,
+            cmd,
+            cwd=self.context.pkg.path,
+            capture_output=True,
+            env=env
+        )
+        if rc is None or rc.returncode != 0:
+            raise RuntimeError(
+                "Could not inspect package using 'cargo package'"
+            )
+
+        if rc.stdout is None:
+            raise RuntimeError(
+                "Failed to capture stdout from 'cargo package'"
+            )
+
+        contents = set(rc.stdout.decode().splitlines())
+        contents.difference_update({
+            # Ignore stuff that we wouldn't want to copy
+            '',
+            None,
+            'Cargo.lock',
+            'Cargo.toml.orig',
+            '.cargo_vcs_info.json',
+        })
+        return contents
+
+    async def _install_package(self, version, env):
+        contents = await self._get_crate_contents(env)
+        crate_path = Path(
+            'share', 'cargo', 'registry', f'{self.context.pkg.name}-{version}')
+
+        for file in contents:
+            dst = crate_path / file
+            install(self.context.args, file, dst)
+
+        # Cargo "directory sources" require a checksum file to be included in
+        # the package metadata (though it need not list all of the files).
+        create_file(
+            self.context.args,
+            crate_path / '.cargo-checksum.json',
+            content='{"files":{},"package":""}\n')
