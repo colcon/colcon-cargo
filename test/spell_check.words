@@ -29,6 +29,7 @@ rustfmt
 scspell
 setuptools
 skipif
+staticmethod
 symlink
 tempfile
 testcase
