@@ -136,6 +136,7 @@ class CargoBuildTask(TaskExtensionPoint):
             '--path', '.',
             '--root', args.install_base,
             '--target-dir', args.build_base,
+            '--no-track',
         ]
         if not any(
             arg == '--profile' or arg.startswith('--profile=')
