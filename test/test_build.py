@@ -72,7 +72,8 @@ def test_path_dependencies():
     assert dep.metadata['cargo_source'] is not None
     # Path.from_uri was only added in Python 3.13
     assert dep.metadata['cargo_source'].startswith('file://')
-    path = dep.metadata['cargo_source'].removeprefix('file://')
+    # removeprefix only added in Python 3.9
+    path = dep.metadata['cargo_source'][len('file://'):]
     # Make sure the dependency path is resolved
     assert Path.is_dir(Path(path))
 
