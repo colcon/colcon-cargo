@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 either = "1.13.0"
+rust-pure-library = {path = "../rust-pure-library"}
