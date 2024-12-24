@@ -59,6 +59,24 @@ def test_package_augmentation():
     assert desc.dependencies['run'] == desc.dependencies['build']
 
 
+def test_path_dependencies():
+    cpi = CargoPackageIdentification()
+    aug = CargoPackageAugmentation()
+    desc = PackageDescriptor(test_project_path)
+    cpi.identify(desc)
+    aug.augment_package(desc)
+    assert PURE_LIBRARY_PACKAGE_NAME in desc.dependencies['build']
+    assert len(desc.dependencies['build']) == 1
+    dep = desc.dependencies['build'].pop()
+    assert 'cargo_source' in dep.metadata
+    assert dep.metadata['cargo_source'] is not None
+    # Path.from_uri was only added in Python 3.13
+    assert dep.metadata['cargo_source'].startswith('file://')
+    path = dep.metadata['cargo_source'].removeprefix('file://')
+    # Make sure the dependency path is resolved
+    assert Path.is_dir(Path(path))
+
+
 @pytest.mark.skipif(
     not shutil.which('cargo'),
     reason='Rust must be installed to run this test')
