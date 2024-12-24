@@ -65,13 +65,16 @@ class CargoBuildTask(TaskExtensionPoint):
             elif build_dir.exists():
                 shutil.rmtree(build_dir)
 
-        # Invoke build step
         if CARGO_EXECUTABLE is None:
             raise RuntimeError("Could not find 'cargo' executable")
+
+        # Get package metadata
+        metadata = await self._get_metadata(env)
 
         cargo_args = args.cargo_args
         if cargo_args is None:
             cargo_args = []
+        # Invoke build step
         cmd = self._build_cmd(cargo_args)
 
         self.progress('build')
@@ -85,7 +88,7 @@ class CargoBuildTask(TaskExtensionPoint):
         # We also need to check if the package has any binaries, because if it
         # has no binaries then cargo install will return an error.
         cmd = self._install_cmd(cargo_args)
-        if cmd is not None and await self._has_binaries(env):
+        if cmd is not None and self._has_binaries(metadata):
             self.progress('install')
             rc = await run(
                 self.context, cmd, cwd=self.context.pkg.path, env=env)
@@ -141,14 +144,16 @@ class CargoBuildTask(TaskExtensionPoint):
             cmd += ['--profile', 'dev']
         return cmd + cargo_args
 
-    # Identify if there are any binaries to install for the current package
-    async def _has_binaries(self, env):
+    async def _get_metadata(self, env):
         cmd = [
             CARGO_EXECUTABLE,
             'metadata',
             '--no-deps',
             '--format-version', '1',
         ]
+
+        # TODO: The reported target_directory is wrong. Does it matter here?
+        #       We could maybe override it with --config
 
         rc = await run(
             self.context,
@@ -167,7 +172,11 @@ class CargoBuildTask(TaskExtensionPoint):
                 "Failed to capture stdout from 'cargo metadata'"
             )
 
-        metadata = json.loads(rc.stdout)
+        return json.loads(rc.stdout)
+
+    # Identify if there are any binaries to install for the current package
+    @staticmethod
+    def _has_binaries(metadata):
         for package in metadata.get('packages', {}):
             for target in package.get('targets', {}):
                 for crate_type in target.get('crate_types', {}):
