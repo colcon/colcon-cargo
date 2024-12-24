@@ -59,6 +59,46 @@ def test_package_augmentation():
     assert desc.dependencies['run'] == desc.dependencies['build']
 
 
+# Ported from Python 3.13 implementation
+# Remove when migrating to Python 3.13 and above
+def from_uri(uri):
+    """Return a new path from the given 'file' URI."""
+    if not uri.startswith('file:'):
+        raise ValueError(f"URI does not start with 'file:': {uri!r}")
+    path = uri[5:]
+    if path[:3] == '///':
+        # Remove empty authority
+        path = path[2:]
+    elif path[:12] == '//localhost/':
+        # Remove 'localhost' authority
+        path = path[11:]
+    if path[:3] == '///' or (path[:1] == '/' and path[2:3] in ':|'):
+        # Remove slash before DOS device/UNC path
+        path = path[1:]
+    if path[1:2] == '|':
+        # Replace bar with colon in DOS drive
+        path = path[:1] + ':' + path[2:]
+    return path
+
+
+def test_path_dependencies():
+    cpi = CargoPackageIdentification()
+    aug = CargoPackageAugmentation()
+    desc = PackageDescriptor(test_project_path)
+    cpi.identify(desc)
+    aug.augment_package(desc)
+    assert PURE_LIBRARY_PACKAGE_NAME in desc.dependencies['build']
+    assert len(desc.dependencies['build']) == 1
+    dep = desc.dependencies['build'].pop()
+    assert 'cargo_source' in dep.metadata
+    assert dep.metadata['cargo_source'] is not None
+    # Path.from_uri was only added in Python 3.13
+    assert dep.metadata['cargo_source'].startswith('file://')
+    path = from_uri(dep.metadata['cargo_source'])
+    # Make sure the dependency path is resolved
+    assert Path.is_dir(Path(path))
+
+
 @pytest.mark.skipif(
     not shutil.which('cargo'),
     reason='Rust must be installed to run this test')

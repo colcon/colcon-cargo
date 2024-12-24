@@ -1,6 +1,8 @@
 # Copyright 2024 Open Source Robotics Foundation, Inc.
 # Licensed under the Apache License, Version 2.0
 
+from pathlib import Path
+
 from colcon_cargo.package_identification.cargo import read_cargo_toml
 from colcon_core.dependency_descriptor import DependencyDescriptor
 from colcon_core.package_augmentation \
@@ -42,7 +44,7 @@ class CargoPackageAugmentation(PackageAugmentationExtensionPoint):
         if not metadata.metadata.get('version'):
             metadata.metadata['version'] = version
 
-        dependencies = extract_dependencies(content)
+        dependencies = extract_dependencies(content, metadata.path)
         for k, v in dependencies.items():
             metadata.dependencies[k] |= v
 
@@ -52,17 +54,18 @@ class CargoPackageAugmentation(PackageAugmentationExtensionPoint):
             metadata.metadata['maintainers'] += authors
 
 
-def extract_dependencies(content):
+def extract_dependencies(content, path):
     """
     Get the dependencies of a Cargo package.
 
     :param content: The dictionary content of the Cargo.toml file
+    :param path: The directory where the Cargo.toml resides
     :returns: The dependencies
     :rtype: dict(string, set(DependencyDescriptor))
     """
     name = content.get('name')
     depends = {
-        create_dependency_descriptor(k, v)
+        create_dependency_descriptor(k, v, path)
         for k, v in content.get('dependencies', {}).items()
         if k != name
     }
@@ -72,17 +75,30 @@ def extract_dependencies(content):
     }
 
 
-def create_dependency_descriptor(name, constraints):
+def create_dependency_descriptor(name, constraints, path):
     """
     Create a dependency descriptor from a Cargo dependency specification.
 
     :param name: The name of the dependee
     :param constraints: The dependency constraints, either a string or
       a dict
+    :param path: The directory from where relative paths should be
+      resolved
     :rtype: DependencyDescriptor
     """
+    if isinstance(constraints, dict):
+        dep_path = constraints.get('path')
+        if dep_path:
+            full_dep_path = Path.cwd() / path / dep_path
+            source = full_dep_path.absolute().as_uri()
+        else:
+            source = constraints.get('git') or \
+                constraints.get('registry')
+    else:
+        source = None
     metadata = {
         'origin': 'cargo',
+        'cargo_source': source,
     }
     # TODO: Interpret SemVer constraints and add appropriate constraint
     #       metadata. Handling arbitrary wildcards will be non-trivial.

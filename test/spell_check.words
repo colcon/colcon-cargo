@@ -11,6 +11,7 @@ etree
 getroot
 iterdir
 linter
+localhost
 lstrip
 luca
 minidom
