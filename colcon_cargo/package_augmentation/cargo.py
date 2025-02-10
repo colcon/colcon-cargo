@@ -79,7 +79,7 @@ def create_dependency_descriptor(name, constraints, path):
     """
     Create a dependency descriptor from a Cargo dependency specification.
 
-    :param name: The name of the dependee
+    :param name: The name of the dependee as it is imported
     :param constraints: The dependency constraints, either a string or
       a dict
     :param path: The directory from where relative paths should be
@@ -94,6 +94,7 @@ def create_dependency_descriptor(name, constraints, path):
         else:
             source = constraints.get('git') or \
                 constraints.get('registry')
+        name = constraints.get('package', name)
     else:
         source = None
     metadata = {
