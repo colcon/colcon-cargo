@@ -6,6 +6,7 @@ from xml.dom import minidom
 import xml.etree.ElementTree as eTree
 
 from colcon_cargo.task.cargo import CARGO_EXECUTABLE
+from colcon_cargo.task.cargo import get_patch_args
 from colcon_core.event.test import TestFailure
 from colcon_core.logging import colcon_logger
 from colcon_core.plugin_system import satisfies_version
@@ -65,9 +66,15 @@ class CargoTestTask(TaskExtensionPoint):
         if CARGO_EXECUTABLE is None:
             raise RuntimeError("Could not find 'cargo' executable")
 
+        # Patch dependencies
+        dependency_paths = self.context.dependencies.values()
+        patch_args = get_patch_args(
+            self.context.pkg.path, dependency_paths, env=env)
+
         cargo_args = args.cargo_args
         if cargo_args is None:
             cargo_args = []
+        cargo_args = patch_args + cargo_args
 
         # invoke cargo test
         unit_rc = await run(

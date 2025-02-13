@@ -7,6 +7,7 @@ import shutil
 import tarfile
 
 from colcon_cargo.task.cargo import CARGO_EXECUTABLE
+from colcon_cargo.task.cargo import get_patch_args
 from colcon_core.environment import create_environment_scripts
 from colcon_core.logging import colcon_logger
 from colcon_core.plugin_system import satisfies_version
@@ -77,9 +78,15 @@ class CargoBuildTask(TaskExtensionPoint):
         # Get package metadata
         metadata = await self._get_metadata(env)
 
+        # Patch dependencies
+        dependency_paths = self.context.dependencies.values()
+        patch_args = get_patch_args(
+            self.context.pkg.path, dependency_paths, env=env)
+
         cargo_args = args.cargo_args
         if cargo_args is None:
             cargo_args = []
+        cargo_args = patch_args + cargo_args
         # Invoke build step
         cmd = self._build_cmd(cargo_args)
 
@@ -105,7 +112,7 @@ class CargoBuildTask(TaskExtensionPoint):
         if self._has_libraries(metadata, pkg.name):
             self.progress('package')
             await self._install_package(
-                metadata['packages'][0]['version'], env)
+                metadata['packages'][0]['version'], env, patch_args)
 
         if not skip_hook_creation:
             create_environment_scripts(
@@ -270,7 +277,7 @@ class CargoBuildTask(TaskExtensionPoint):
         return False
 
     # Determine what files would be part of a packaged crate
-    async def _get_crate_contents(self, env):
+    async def _get_crate_contents(self, env, cargo_args):
         cmd = [
             CARGO_EXECUTABLE,
             'package',
@@ -278,7 +285,7 @@ class CargoBuildTask(TaskExtensionPoint):
             '--allow-dirty',
             '--quiet',
             '--manifest-path', str(self._stage / 'Cargo.toml')
-        ]
+        ] + cargo_args
 
         rc = await run(
             self.context,
@@ -309,8 +316,8 @@ class CargoBuildTask(TaskExtensionPoint):
         })
         return contents
 
-    async def _install_package(self, version, env):
-        contents = await self._get_crate_contents(env)
+    async def _install_package(self, version, env, cargo_args):
+        contents = await self._get_crate_contents(env, cargo_args)
         crate_path = Path(
             'share', 'cargo', 'registry', f'{self.context.pkg.name}-{version}')
 
