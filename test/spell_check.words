@@ -21,6 +21,7 @@ minidom
 monkeypatch
 nargs
 noqa
+patcher
 pathlib
 plugin
 pydocstyle
