@@ -9,11 +9,17 @@ from colcon_cargo.task.cargo import CARGO_EXECUTABLE
 from colcon_core.environment import create_environment_scripts
 from colcon_core.logging import colcon_logger
 from colcon_core.plugin_system import satisfies_version
-from colcon_core.shell import create_environment_hook, get_command_environment
+from colcon_core.shell import create_environment_hook
+from colcon_core.shell import find_installed_packages_in_environment
+from colcon_core.shell import get_command_environment
 from colcon_core.task import create_file
 from colcon_core.task import install
 from colcon_core.task import run
 from colcon_core.task import TaskExtensionPoint
+from pallet_patcher.manifest import get_dependencies
+from pallet_patcher.manifest import load_manifest
+from pallet_patcher.search import compose
+from pallet_patcher.search import get_cargo_arguments
 
 logger = colcon_logger.getChild(__name__)
 
@@ -73,9 +79,33 @@ class CargoBuildTask(TaskExtensionPoint):
         # Get package metadata
         metadata = await self._get_metadata(env)
 
+        # Patch dependencies
+        prefix_paths = list(self.context.dependencies.values())
+        for pkg_path in find_installed_packages_in_environment().values():
+            if pkg_path not in prefix_paths:
+                prefix_paths.append(pkg_path)
+        search_paths = [
+            Path(prefix) / 'share' / 'cargo' / 'registry'
+            for prefix in prefix_paths
+        ]
+
+        manifest = load_manifest(self.context.pkg.path / 'Cargo.toml')
+        plain_deps, build_deps, dev_deps = get_dependencies(
+            manifest, self.context.pkg.path)
+        dependencies = [
+            *plain_deps.items(),
+            *build_deps.items(),
+            *dev_deps.items(),
+        ]
+
+        composition = compose(dependencies, search_paths)
+        default_registry = env.get('CARGO_REGISTRY_DEFAULT') or 'crates-io'
+        patch_args = get_cargo_arguments(composition, default_registry)
+
         cargo_args = args.cargo_args
         if cargo_args is None:
             cargo_args = []
+        cargo_args = patch_args + cargo_args
         # Invoke build step
         cmd = self._build_cmd(cargo_args)
 
