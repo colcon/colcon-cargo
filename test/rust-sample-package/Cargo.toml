@@ -8,3 +8,6 @@ edition = "2018"
 
 [dependencies]
 local-rust-pure-library = {package = "rust-pure-library", path = "../rust-pure-library"}
+
+[dev-dependencies]
+tempdir = "0.3"
