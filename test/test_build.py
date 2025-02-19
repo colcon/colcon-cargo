@@ -47,6 +47,7 @@ def test_package_identification():
 def test_package_augmentation():
     cpi = CargoPackageIdentification()
     aug = CargoPackageAugmentation()
+
     desc = PackageDescriptor(pure_library_path)
     cpi.identify(desc)
     aug.augment_package(desc)
@@ -57,6 +58,16 @@ def test_package_augmentation():
     assert len(desc.dependencies['build']) == 1
     assert 'either' in desc.dependencies['build']
     assert desc.dependencies['run'] == desc.dependencies['build']
+
+    desc = PackageDescriptor(test_project_path)
+    cpi.identify(desc)
+    aug.augment_package(desc)
+    print(desc)
+    assert len(desc.dependencies['build']) == 2
+    assert PURE_LIBRARY_PACKAGE_NAME in desc.dependencies['build']
+    assert 'tempdir' in desc.dependencies['build']
+    assert len(desc.dependencies['run']) == 1
+    assert PURE_LIBRARY_PACKAGE_NAME in desc.dependencies['run']
 
 
 # Ported from Python 3.13 implementation
@@ -87,9 +98,11 @@ def test_path_dependencies():
     desc = PackageDescriptor(test_project_path)
     cpi.identify(desc)
     aug.augment_package(desc)
-    assert PURE_LIBRARY_PACKAGE_NAME in desc.dependencies['build']
-    assert len(desc.dependencies['build']) == 1
-    dep = desc.dependencies['build'].pop()
+    for dep in desc.dependencies['build']:
+        if dep.name == PURE_LIBRARY_PACKAGE_NAME:
+            break
+    else:
+        assert False, f'{PURE_LIBRARY_PACKAGE_NAME} not in build deps'
     assert 'cargo_source' in dep.metadata
     assert dep.metadata['cargo_source'] is not None
     # Path.from_uri was only added in Python 3.13

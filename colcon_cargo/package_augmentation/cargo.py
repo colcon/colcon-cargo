@@ -69,9 +69,19 @@ def extract_dependencies(content, path):
         for k, v in content.get('dependencies', {}).items()
         if k != name
     }
+    build_depends = {
+        create_dependency_descriptor(k, v, path)
+        for k, v in content.get('build-dependencies', {}).items()
+        if k != name
+    }
+    dev_depends = {
+        create_dependency_descriptor(k, v, path)
+        for k, v in content.get('dev-dependencies', {}).items()
+        if k != name
+    }
     return {
-        'build': depends,
-        'run': depends,
+        'build': depends | build_depends | dev_depends,
+        'run': depends | build_depends,
     }
 
 
