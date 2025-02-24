@@ -1,0 +1,5 @@
+[package]
+name = "workspace-member"
+version = "0.1.0"
+authors = ["Test<test@test.com>"]
+edition = "2018"

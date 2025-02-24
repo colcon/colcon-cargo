@@ -2,6 +2,7 @@
 # Licensed under the Apache License, Version 2.0
 
 from colcon_core.logging import colcon_logger
+from colcon_core.package_identification import IgnoreLocationException
 from colcon_core.package_identification \
     import PackageIdentificationExtensionPoint
 from colcon_core.plugin_system import satisfies_version
@@ -29,6 +30,7 @@ class CargoPackageIdentification(PackageIdentificationExtensionPoint):
         satisfies_version(
             PackageIdentificationExtensionPoint.EXTENSION_POINT_VERSION,
             '^1.0')
+        self.workspace_package_paths = set()
 
     def identify(self, metadata):  # noqa: D102
         if metadata.type is not None and metadata.type != 'cargo':
@@ -39,12 +41,23 @@ class CargoPackageIdentification(PackageIdentificationExtensionPoint):
             return
 
         content = read_cargo_toml(cargo_toml)
-        if 'workspace' in content:
-            logger.debug(
-                f'Ignoring unsupported Cargo Workspace at {metadata.path}')
-            return
+        ws_members = {
+            member
+            for pattern in content.get('workspace', {}).get('members', ())
+            for member in metadata.path.glob(pattern)
+        }
+        ws_members.difference_update(
+            exclude
+            for pattern in content.get('workspace', {}).get('exclude', ())
+            for exclude in metadata.path.glob(pattern)
+        )
+        self.workspace_package_paths.update(ws_members)
 
         package = content.get('package', {})
+        if not package and 'workspace' in content:
+            # Let the workspace decide what packages live here
+            raise IgnoreLocationException()
+
         name = package.get('name')
         if not name and not metadata.name:
             raise RuntimeError(
