@@ -8,6 +8,7 @@ from colcon_core.package_identification import identify
 from colcon_core.package_identification import IgnoreLocationException
 from colcon_core.plugin_system import satisfies_version
 
+from icecream import ic
 
 class CargoWorkspacePackageDiscovery(PackageDiscoveryExtensionPoint):
     """Discover packages which are part of a cargo workspace."""
@@ -26,18 +27,25 @@ class CargoWorkspacePackageDiscovery(PackageDiscoveryExtensionPoint):
         return True
 
     def discover(self, *, args, identification_extensions):  # noqa: D102
+        print(" >>>>>>> TRYING TO DISCOVER CARGO WORKSPACES")
         paths = set()
         for extensions_same_prio in identification_extensions.values():
             for extension in extensions_same_prio.values():
+                ic(extension)
                 if isinstance(extension, CargoPackageIdentification):
+                    ic(extension.workspace_package_paths)
                     paths.update(extension.workspace_package_paths)
 
         descs = set()
+        ic(paths)
         for path in paths:
             try:
+                ic(descs)
                 result = identify(identification_extensions, path)
             except IgnoreLocationException:
                 continue
             if result:
                 descs.add(result)
+
+        ic(descs)
         return descs

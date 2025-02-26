@@ -33,6 +33,7 @@ class CargoPackageIdentification(PackageIdentificationExtensionPoint):
         self.workspace_package_paths = set()
 
     def identify(self, metadata):  # noqa: D102
+        print(" >>>>>>> CHECKING FOR CARGO PACKAGE")
         if metadata.type is not None and metadata.type != 'cargo':
             return
 
