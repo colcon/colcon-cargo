@@ -185,8 +185,8 @@ class CargoBuildTask(TaskExtensionPoint):
             if package.get('name') != package_name:
                 continue
             for target in package.get('targets', {}):
-                for crate_type in target.get('crate_types', {}):
-                    if crate_type == 'bin':
+                for kind in target.get('kind', {}):
+                    if kind == 'bin':
                         # If any one binary exists in the package then we
                         # should go ahead and run cargo install
                         return True

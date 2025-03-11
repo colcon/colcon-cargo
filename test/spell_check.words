@@ -34,6 +34,7 @@ setuptools
 skipif
 staticmethod
 symlink
+tempdir
 tempfile
 testcase
 testsuite
