@@ -11,3 +11,6 @@ local-rust-pure-library = {package = "rust-pure-library", path = "../rust-pure-l
 
 [dev-dependencies]
 tempdir = "0.3"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = "0.59"

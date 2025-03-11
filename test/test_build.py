@@ -63,11 +63,13 @@ def test_package_augmentation():
     cpi.identify(desc)
     aug.augment_package(desc)
     print(desc)
-    assert len(desc.dependencies['build']) == 2
+    assert len(desc.dependencies['build']) == 3
     assert PURE_LIBRARY_PACKAGE_NAME in desc.dependencies['build']
+    assert 'windows-sys' in desc.dependencies['build']
     assert 'tempdir' in desc.dependencies['build']
-    assert len(desc.dependencies['run']) == 1
+    assert len(desc.dependencies['run']) == 2
     assert PURE_LIBRARY_PACKAGE_NAME in desc.dependencies['run']
+    assert 'windows-sys' in desc.dependencies['run']
 
 
 # Ported from Python 3.13 implementation
