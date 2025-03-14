@@ -39,12 +39,10 @@ class CargoPackageIdentification(PackageIdentificationExtensionPoint):
             return
 
         content = read_cargo_toml(cargo_toml)
-        if 'workspace' in content:
-            logger.debug(
-                f'Ignoring unsupported Cargo Workspace at {metadata.path}')
+        package = content.get('package', {})
+        if not package:
             return
 
-        package = content.get('package', {})
         name = package.get('name')
         if not name and not metadata.name:
             raise RuntimeError(

@@ -4,8 +4,10 @@ asyncio
 autouse
 colcon
 completers
+cwpd
 dependee
 deps
+descs
 easymov
 etree
 getroot
@@ -46,4 +48,5 @@ tomllib
 toprettyxml
 tostring
 wildcards
+workspaces
 xmlstr

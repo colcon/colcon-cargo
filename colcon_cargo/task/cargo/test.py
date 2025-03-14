@@ -93,12 +93,13 @@ class CargoTestTask(TaskExtensionPoint):
 
     def _test_cmd(self, cargo_args):
         args = self.context.args
+        pkg = self.context.pkg
         return [
             CARGO_EXECUTABLE,
             'test',
             '--quiet',
-            '--target-dir',
-            args.build_base,
+            '--package', pkg.name,
+            '--target-dir', args.build_base,
         ] + cargo_args + [
             '--',
             '--color=never',
@@ -106,10 +107,12 @@ class CargoTestTask(TaskExtensionPoint):
 
     # Ignore cargo args for rustfmt
     def _fmt_cmd(self):
+        pkg = self.context.pkg
         return [
             CARGO_EXECUTABLE,
             'fmt',
             '--check',
+            '--package', pkg.name,
             '--',
             '--color=never',
         ]
