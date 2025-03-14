@@ -1,8 +1,8 @@
 # Copyright 2025 Open Source Robotics Foundation, Inc.
 # Licensed under the Apache License, Version 2.0
 
-from colcon_cargo.package_identification.cargo \
-    import CargoPackageIdentification
+from colcon_cargo.package_identification.cargo_workspace \
+    import CargoWorkspaceIdentification
 from colcon_core.package_discovery import PackageDiscoveryExtensionPoint
 from colcon_core.package_identification import identify
 from colcon_core.package_identification import IgnoreLocationException
@@ -20,17 +20,22 @@ class CargoWorkspacePackageDiscovery(PackageDiscoveryExtensionPoint):
         super().__init__()
         satisfies_version(
             PackageDiscoveryExtensionPoint.EXTENSION_POINT_VERSION,
-            '^1.0')
+            '^1.1')
 
     def has_parameters(self, *, args):  # noqa: D102
-        return True
+        return None
 
     def discover(self, *, args, identification_extensions):  # noqa: D102
+        # Nested workspaces are not currently supported by cargo. If they ever
+        # are, this code should be updated to run the whole process again until
+        # no additional member package paths are found.
+
         paths = set()
         for extensions_same_prio in identification_extensions.values():
             for extension in extensions_same_prio.values():
-                if isinstance(extension, CargoPackageIdentification):
+                if isinstance(extension, CargoWorkspaceIdentification):
                     paths.update(extension.workspace_package_paths)
+                    extension.workspace_package_paths.clear()
 
         descs = set()
         for path in paths:

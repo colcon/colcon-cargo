@@ -12,7 +12,10 @@ import xml.etree.ElementTree as eTree
 from colcon_cargo.package_augmentation.cargo import CargoPackageAugmentation
 from colcon_cargo.package_discovery.cargo_workspace \
     import CargoWorkspacePackageDiscovery
-from colcon_cargo.package_identification.cargo import CargoPackageIdentification  # noqa: E501
+from colcon_cargo.package_identification.cargo \
+    import CargoPackageIdentification
+from colcon_cargo.package_identification.cargo_workspace \
+    import CargoWorkspaceIdentification
 from colcon_cargo.task.cargo.build import CargoBuildTask
 from colcon_cargo.task.cargo.test import CargoTestTask
 from colcon_core.event_handler.console_direct import ConsoleDirectEventHandler
@@ -77,8 +80,12 @@ def test_package_augmentation():
 
 
 def test_package_discovery():
+    cwi = CargoWorkspaceIdentification()
     cpi = CargoPackageIdentification()
     desc = PackageDescriptor(workspace_project_path)
+    cwi.identify(desc)
+    assert not desc.type
+    assert not desc.name
     cpi.identify(desc)
     assert desc.type == 'cargo'
     assert desc.name == WORKSPACE_PACKAGE_NAME
@@ -87,7 +94,8 @@ def test_package_discovery():
     descs = cwpd.discover(
         args=SimpleNamespace(),
         identification_extensions={
-            cwpd.PRIORITY: {'cargo': cpi},
+            cwi.PRIORITY: {'cargo_workspace': cwi},
+            cpi.PRIORITY: {'cargo': cpi},
         })
 
     assert len(descs) == 1
