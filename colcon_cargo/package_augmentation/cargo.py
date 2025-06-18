@@ -45,12 +45,16 @@ class CargoPackageAugmentation(PackageAugmentationExtensionPoint):
         if not metadata.metadata.get('version'):
             metadata.metadata['version'] = version
 
-        dependencies = extract_dependencies(package_name, content, metadata.path)
+        dependencies = extract_dependencies(
+            package_name, content, metadata.path
+        )
         for k, v in dependencies.items():
             metadata.dependencies[k] |= v
 
         for category, spec in content.get('target', {}).items():
-            dependencies = extract_dependencies(package_name, spec, metadata.path)
+            dependencies = extract_dependencies(
+                package_name, spec, metadata.path
+            )
             for k, v in dependencies.items():
                 metadata.dependencies[k] |= v
 
