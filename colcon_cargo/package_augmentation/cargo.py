@@ -40,16 +40,17 @@ class CargoPackageAugmentation(PackageAugmentationExtensionPoint):
         if not package:
             return
 
+        package_name = package.get('name')
         version = package.get('version', '0.0.0')
         if not metadata.metadata.get('version'):
             metadata.metadata['version'] = version
 
-        dependencies = extract_dependencies(content, metadata.path)
+        dependencies = extract_dependencies(package_name, content, metadata.path)
         for k, v in dependencies.items():
             metadata.dependencies[k] |= v
 
         for category, spec in content.get('target', {}).items():
-            dependencies = extract_dependencies(spec, metadata.path)
+            dependencies = extract_dependencies(package_name, spec, metadata.path)
             for k, v in dependencies.items():
                 metadata.dependencies[k] |= v
 
@@ -59,7 +60,7 @@ class CargoPackageAugmentation(PackageAugmentationExtensionPoint):
             metadata.metadata['maintainers'] += authors
 
 
-def extract_dependencies(content, path):
+def extract_dependencies(package_name, content, path):
     """
     Get the dependencies of a Cargo package.
 
@@ -68,21 +69,22 @@ def extract_dependencies(content, path):
     :returns: The dependencies
     :rtype: dict(string, set(DependencyDescriptor))
     """
-    name = content.get('name')
+    target_name = content.get('name')
+
     depends = {
-        create_dependency_descriptor(k, v, path)
+        create_dependency_descriptor(target_name, k, v, path)
         for k, v in content.get('dependencies', {}).items()
-        if k != name
+        if k != target_name and k != package_name
     }
     build_depends = {
-        create_dependency_descriptor(k, v, path)
+        create_dependency_descriptor(target_name, k, v, path)
         for k, v in content.get('build-dependencies', {}).items()
-        if k != name
+        if k != target_name and k != package_name
     }
     dev_depends = {
-        create_dependency_descriptor(k, v, path)
+        create_dependency_descriptor(target_name, k, v, path)
         for k, v in content.get('dev-dependencies', {}).items()
-        if k != name
+        if k != target_name and k != package_name
     }
     return {
         'build': depends | build_depends | dev_depends,
@@ -90,7 +92,7 @@ def extract_dependencies(content, path):
     }
 
 
-def create_dependency_descriptor(name, constraints, path):
+def create_dependency_descriptor(package, name, constraints, path):
     """
     Create a dependency descriptor from a Cargo dependency specification.
 
