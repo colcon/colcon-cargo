@@ -73,22 +73,25 @@ def extract_dependencies(package_name, content, path):
     :returns: The dependencies
     :rtype: dict(string, set(DependencyDescriptor))
     """
-    target_name = content.get('name')
 
     depends = {
-        create_dependency_descriptor(target_name, k, v, path)
-        for k, v in content.get('dependencies', {}).items()
-        if k != target_name and k != package_name
+        create_dependency_descriptor(k, v, path)
+        for k, v in filter_dependency_list(
+            content.get('dependencies', {}).items()
+        )
     }
     build_depends = {
-        create_dependency_descriptor(target_name, k, v, path)
-        for k, v in content.get('build-dependencies', {}).items()
-        if k != target_name and k != package_name
+        create_dependency_descriptor(k, v, path)
+        for k, v in filter_dependency_list(
+            content.get('build-dependencies', {}).items()
+        )
     }
     dev_depends = {
-        create_dependency_descriptor(target_name, k, v, path)
-        for k, v in content.get('dev-dependencies', {}).items()
-        if k != target_name and k != package_name
+        create_dependency_descriptor(k, v, path)
+        for k, v in filter_dependency_list(
+            content.get('dev-dependencies', {}).items(),
+            package_name,
+        )
     }
     return {
         'build': depends | build_depends | dev_depends,
@@ -96,7 +99,19 @@ def extract_dependencies(package_name, content, path):
     }
 
 
-def create_dependency_descriptor(package, name, constraints, path):
+def filter_dependency_list(dependencies, filter_out = None):
+    filtered_dependencies = {}
+    for dependency, constraints in dependencies:
+        if isinstance(constraints, dict):
+            dependency = constraints.get('package', dependency)
+
+        if dependency != filter_out:
+            filtered_dependencies[dependency] = constraints
+
+    return filtered_dependencies.items()
+
+
+def create_dependency_descriptor(dependency_name, constraints, path):
     """
     Create a dependency descriptor from a Cargo dependency specification.
 
@@ -115,7 +130,6 @@ def create_dependency_descriptor(package, name, constraints, path):
         else:
             source = constraints.get('git') or \
                 constraints.get('registry')
-        name = constraints.get('package', name)
     else:
         source = None
     metadata = {
@@ -124,4 +138,4 @@ def create_dependency_descriptor(package, name, constraints, path):
     }
     # TODO: Interpret SemVer constraints and add appropriate constraint
     #       metadata. Handling arbitrary wildcards will be non-trivial.
-    return DependencyDescriptor(name, metadata=metadata)
+    return DependencyDescriptor(dependency_name, metadata=metadata)
