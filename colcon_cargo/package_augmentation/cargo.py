@@ -73,7 +73,6 @@ def extract_dependencies(package_name, content, path):
     :returns: The dependencies
     :rtype: dict(string, set(DependencyDescriptor))
     """
-
     depends = {
         create_dependency_descriptor(k, v, path)
         for k, v in filter_dependency_list(
