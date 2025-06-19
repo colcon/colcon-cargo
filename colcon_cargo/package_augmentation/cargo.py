@@ -100,8 +100,11 @@ def extract_dependencies(package_name, content, path):
 
 def filter_dependency_list(dependencies, filter_out=None):
     """
+    Filter dependency names.
+
     Find the external names of dependencies and optionally filter out any that
-    match a pattern.
+    match a pattern. The filtering is used for dev-dependencies which may have
+    the package itself as a dependency.
 
     :param dependencies: The dictionary of every dependency and its constraints
     :param filter_out: The name of a dependency to filter out.
