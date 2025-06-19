@@ -100,6 +100,15 @@ def extract_dependencies(package_name, content, path):
 
 
 def filter_dependency_list(dependencies, filter_out=None):
+    """
+    Find the external names of dependencies and optionally filter out any that
+    match a pattern.
+
+    :param dependencies: The dictionary of every dependency and its constraints
+    :param filter_out: The name of a dependency to filter out.
+    :returns: The filtered dependency list with the external names as keys
+    :rtype: dict(string, dict)
+    """
     filtered_dependencies = {}
     for dependency, constraints in dependencies:
         if isinstance(constraints, dict):
