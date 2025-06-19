@@ -90,7 +90,7 @@ def extract_dependencies(package_name, content, path):
         create_dependency_descriptor(k, v, path)
         for k, v in filter_dependency_list(
             content.get('dev-dependencies', {}).items(),
-            package_name,
+            filter_out=package_name,
         )
     }
     return {
@@ -99,7 +99,7 @@ def extract_dependencies(package_name, content, path):
     }
 
 
-def filter_dependency_list(dependencies, filter_out = None):
+def filter_dependency_list(dependencies, filter_out=None):
     filtered_dependencies = {}
     for dependency, constraints in dependencies:
         if isinstance(constraints, dict):
