@@ -40,16 +40,21 @@ class CargoPackageAugmentation(PackageAugmentationExtensionPoint):
         if not package:
             return
 
+        package_name = package.get('name')
         version = package.get('version', '0.0.0')
         if not metadata.metadata.get('version'):
             metadata.metadata['version'] = version
 
-        dependencies = extract_dependencies(content, metadata.path)
+        dependencies = extract_dependencies(
+            package_name, content, metadata.path
+        )
         for k, v in dependencies.items():
             metadata.dependencies[k] |= v
 
         for category, spec in content.get('target', {}).items():
-            dependencies = extract_dependencies(spec, metadata.path)
+            dependencies = extract_dependencies(
+                package_name, spec, metadata.path
+            )
             for k, v in dependencies.items():
                 metadata.dependencies[k] |= v
 
@@ -59,7 +64,7 @@ class CargoPackageAugmentation(PackageAugmentationExtensionPoint):
             metadata.metadata['maintainers'] += authors
 
 
-def extract_dependencies(content, path):
+def extract_dependencies(package_name, content, path):
     """
     Get the dependencies of a Cargo package.
 
@@ -68,21 +73,24 @@ def extract_dependencies(content, path):
     :returns: The dependencies
     :rtype: dict(string, set(DependencyDescriptor))
     """
-    name = content.get('name')
     depends = {
         create_dependency_descriptor(k, v, path)
-        for k, v in content.get('dependencies', {}).items()
-        if k != name
+        for k, v in filter_dependency_list(
+            content.get('dependencies', {}).items()
+        )
     }
     build_depends = {
         create_dependency_descriptor(k, v, path)
-        for k, v in content.get('build-dependencies', {}).items()
-        if k != name
+        for k, v in filter_dependency_list(
+            content.get('build-dependencies', {}).items()
+        )
     }
     dev_depends = {
         create_dependency_descriptor(k, v, path)
-        for k, v in content.get('dev-dependencies', {}).items()
-        if k != name
+        for k, v in filter_dependency_list(
+            content.get('dev-dependencies', {}).items(),
+            filter_out=package_name,
+        )
     }
     return {
         'build': depends | build_depends | dev_depends,
@@ -90,7 +98,31 @@ def extract_dependencies(content, path):
     }
 
 
-def create_dependency_descriptor(name, constraints, path):
+def filter_dependency_list(dependencies, filter_out=None):
+    """
+    Filter dependency names.
+
+    Find the external names of dependencies and optionally filter out any that
+    match a pattern. The filtering is used for dev-dependencies which may have
+    the package itself as a dependency.
+
+    :param dependencies: The dictionary of every dependency and its constraints
+    :param filter_out: The name of a dependency to filter out.
+    :returns: The filtered dependency list with the external names as keys
+    :rtype: dict(string, dict)
+    """
+    filtered_dependencies = {}
+    for dependency, constraints in dependencies:
+        if isinstance(constraints, dict):
+            dependency = constraints.get('package', dependency)
+
+        if dependency != filter_out:
+            filtered_dependencies[dependency] = constraints
+
+    return filtered_dependencies.items()
+
+
+def create_dependency_descriptor(dependency_name, constraints, path):
     """
     Create a dependency descriptor from a Cargo dependency specification.
 
@@ -109,7 +141,6 @@ def create_dependency_descriptor(name, constraints, path):
         else:
             source = constraints.get('git') or \
                 constraints.get('registry')
-        name = constraints.get('package', name)
     else:
         source = None
     metadata = {
@@ -118,4 +149,4 @@ def create_dependency_descriptor(name, constraints, path):
     }
     # TODO: Interpret SemVer constraints and add appropriate constraint
     #       metadata. Handling arbitrary wildcards will be non-trivial.
-    return DependencyDescriptor(name, metadata=metadata)
+    return DependencyDescriptor(dependency_name, metadata=metadata)
