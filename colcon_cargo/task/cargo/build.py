@@ -79,8 +79,9 @@ class CargoBuildTask(TaskExtensionPoint):
 
         self.progress('build')
 
+        pkg = self.context.pkg
         rc = await run(
-            self.context, cmd, cwd=self.context.pkg.path, env=env)
+            self.context, cmd, cwd=pkg.path, env=env)
         if rc and rc.returncode:
             return rc.returncode
 
@@ -88,16 +89,16 @@ class CargoBuildTask(TaskExtensionPoint):
         # We also need to check if the package has any binaries, because if it
         # has no binaries then cargo install will return an error.
         cmd = self._install_cmd(cargo_args)
-        if cmd is not None and self._has_binaries(metadata):
+        if cmd is not None and self._has_binaries(metadata, pkg.name):
             self.progress('install')
             rc = await run(
-                self.context, cmd, cwd=self.context.pkg.path, env=env)
+                self.context, cmd, cwd=pkg.path, env=env)
             if rc and rc.returncode:
                 return rc.returncode
 
         if not skip_hook_creation:
             create_environment_scripts(
-                self.context.pkg, args, additional_hooks=additional_hooks)
+                pkg, args, additional_hooks=additional_hooks)
 
     # Overridden by colcon-ros-cargo
     def _prepare(self, env, additional_hooks):
@@ -111,10 +112,12 @@ class CargoBuildTask(TaskExtensionPoint):
     # Overridden by colcon-ros-cargo
     def _build_cmd(self, cargo_args):
         args = self.context.args
+        pkg = self.context.pkg
         cmd = [
             CARGO_EXECUTABLE,
             'build',
             '--quiet',
+            '--package', pkg.name,
             '--target-dir', args.build_base,
         ]
         if not any(
@@ -177,8 +180,13 @@ class CargoBuildTask(TaskExtensionPoint):
 
     # Identify if there are any binaries to install for the current package
     @staticmethod
-    def _has_binaries(metadata):
+    def _has_binaries(metadata, package_name):
         for package in metadata.get('packages', {}):
+            # If the package is part of a cargo workspace, the metadata
+            # contains all members. We're only interested in our target
+            # package - ignore the other workspace members here.
+            if package.get('name') != package_name:
+                continue
             for target in package.get('targets', {}):
                 for kind in target.get('kind', {}):
                     if kind == 'bin':

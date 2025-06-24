@@ -1,0 +1,9 @@
+[package]
+name = "rust-workspace"
+version = "0.1.0"
+authors = ["Test<test@test.com>"]
+edition = "2018"
+
+[workspace]
+members = ["workspace-mem*"]
+default-members = ["workspace-mem*"]

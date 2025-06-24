@@ -10,7 +10,12 @@ from types import SimpleNamespace
 import xml.etree.ElementTree as eTree
 
 from colcon_cargo.package_augmentation.cargo import CargoPackageAugmentation
-from colcon_cargo.package_identification.cargo import CargoPackageIdentification  # noqa: E501
+from colcon_cargo.package_discovery.cargo_workspace \
+    import CargoWorkspacePackageDiscovery
+from colcon_cargo.package_identification.cargo \
+    import CargoPackageIdentification
+from colcon_cargo.package_identification.cargo_workspace \
+    import CargoWorkspaceIdentification
 from colcon_cargo.task.cargo.build import CargoBuildTask
 from colcon_cargo.task.cargo.test import CargoTestTask
 from colcon_core.event_handler.console_direct import ConsoleDirectEventHandler
@@ -21,9 +26,11 @@ import pytest
 
 TEST_PACKAGE_NAME = 'rust-sample-package'
 PURE_LIBRARY_PACKAGE_NAME = 'rust-pure-library'
+WORKSPACE_PACKAGE_NAME = 'rust-workspace'
 
 test_project_path = Path(__file__).parent / TEST_PACKAGE_NAME
 pure_library_path = Path(__file__).parent / PURE_LIBRARY_PACKAGE_NAME
+workspace_project_path = Path(__file__).parent / WORKSPACE_PACKAGE_NAME
 
 
 @pytest.fixture(autouse=True)
@@ -70,6 +77,31 @@ def test_package_augmentation():
     assert len(desc.dependencies['run']) == 2
     assert PURE_LIBRARY_PACKAGE_NAME in desc.dependencies['run']
     assert 'windows-sys' in desc.dependencies['run']
+
+
+def test_package_discovery():
+    cwi = CargoWorkspaceIdentification()
+    cpi = CargoPackageIdentification()
+    desc = PackageDescriptor(workspace_project_path)
+    cwi.identify(desc)
+    assert not desc.type
+    assert not desc.name
+    cpi.identify(desc)
+    assert desc.type == 'cargo'
+    assert desc.name == WORKSPACE_PACKAGE_NAME
+
+    cwpd = CargoWorkspacePackageDiscovery()
+    descs = cwpd.discover(
+        args=SimpleNamespace(),
+        identification_extensions={
+            cwi.PRIORITY: {'cargo_workspace': cwi},
+            cpi.PRIORITY: {'cargo': cpi},
+        })
+
+    assert len(descs) == 1
+    desc = descs.pop()
+    assert desc.type == 'cargo'
+    assert desc.name == 'workspace-member'
 
 
 # Ported from Python 3.13 implementation
@@ -230,3 +262,54 @@ def check_result_file(path):
     fmt_result = testsuite.find("testcase[@name='fmt']")
     assert fmt_result is not None
     assert fmt_result.find('failure') is None
+
+
+@pytest.mark.skipif(
+    not shutil.which('cargo'),
+    reason='Rust must be installed to run this test')
+def test_workspace_with_package():
+    event_loop = new_event_loop()
+    asyncio.set_event_loop(event_loop)
+
+    try:
+        cpi = CargoPackageIdentification()
+        package = PackageDescriptor(workspace_project_path)
+        cpi.identify(package)
+
+        assert package.name == WORKSPACE_PACKAGE_NAME
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
+            # TODO(luca) Also test clean build and cargo args
+            context = TaskContext(pkg=package,
+                                  args=SimpleNamespace(
+                                      path=str(workspace_project_path),
+                                      build_base=str(tmpdir / 'build'),
+                                      install_base=str(tmpdir / 'install'),
+                                      clean_build=None,
+                                      cargo_args=None,
+                                  ),
+                                  dependencies={}
+                                  )
+
+            task = CargoBuildTask()
+            task.set_context(context=context)
+
+            rc = event_loop.run_until_complete(task.build())
+            assert not rc
+
+            # Make sure the binary is compiled
+            install_base = Path(task.context.args.install_base)
+            app_name = package.name
+            # Executable in windows have a .exe extension
+            if os.name == 'nt':
+                app_name += '.exe'
+            assert (install_base / 'bin' / app_name).is_file()
+
+            # There should only be a single executable
+            # This check is specifically to ensure that other workspace
+            # members didn't get installed as well
+            assert len(tuple((install_base / 'bin').iterdir())) == 1
+
+    finally:
+        event_loop.close()
