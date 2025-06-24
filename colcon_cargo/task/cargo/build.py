@@ -182,6 +182,9 @@ class CargoBuildTask(TaskExtensionPoint):
     @staticmethod
     def _has_binaries(metadata, package_name):
         for package in metadata.get('packages', {}):
+            # If the package is part of a cargo workspace, the metadata
+            # contains all members. We're only interested in our target
+            # package - ignore the other workspace members here.
             if package.get('name') != package_name:
                 continue
             for target in package.get('targets', {}):
