@@ -55,7 +55,9 @@ class CargoWorkspaceIdentification(PackageIdentificationExtensionPoint):
         self.workspace_package_paths.update(ws_members)
 
         all_package_paths = {
-            p.parent for p in pathlib.Path(metadata.path).rglob('package.xml')
+            p.parent
+            for p in pathlib.Path(metadata.path).rglob('package.xml')
+            if not pathlib.Path(p.parent / 'Cargo.toml').is_file()
         }
 
         self.non_cargo_paths.update(
