@@ -1,6 +1,8 @@
 # Copyright 2025 Open Source Robotics Foundation, Inc.
 # Licensed under the Apache License, Version 2.0
 
+import pathlib
+
 from colcon_cargo.package_identification.cargo import read_cargo_toml
 from colcon_core.package_identification import IgnoreLocationException
 from colcon_core.package_identification \
@@ -25,6 +27,7 @@ class CargoWorkspaceIdentification(PackageIdentificationExtensionPoint):
             PackageIdentificationExtensionPoint.EXTENSION_POINT_VERSION,
             '^1.0')
         self.workspace_package_paths = set()
+        self.non_cargo_paths = set()
 
     def identify(self, metadata):  # noqa: D102
         if metadata.type is not None and metadata.type != 'cargo':
@@ -43,12 +46,23 @@ class CargoWorkspaceIdentification(PackageIdentificationExtensionPoint):
             for pattern in content['workspace'].get('members', ())
             for member in metadata.path.glob(pattern)
         }
-        ws_members.difference_update(
+        excluded_ws_members = {
             exclude
             for pattern in content['workspace'].get('exclude', ())
             for exclude in metadata.path.glob(pattern)
-        )
+        }
+        ws_members.difference_update(excluded_ws_members)
         self.workspace_package_paths.update(ws_members)
+
+        all_package_paths = {
+            p.parent for p in pathlib.Path(metadata.path).rglob('package.xml')
+        }
+
+        self.non_cargo_paths.update(
+            all_package_paths.difference(
+                self.workspace_package_paths, excluded_ws_members
+            )
+        )
 
         if 'package' not in content:
             # Prevent any further attempts to discover packages in this
