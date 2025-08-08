@@ -35,6 +35,7 @@ class CargoWorkspacePackageDiscovery(PackageDiscoveryExtensionPoint):
             for extension in extensions_same_prio.values():
                 if isinstance(extension, CargoWorkspaceIdentification):
                     paths.update(extension.workspace_package_paths)
+                    paths.update(extension.non_cargo_paths)
                     extension.workspace_package_paths.clear()
 
         descs = set()
