@@ -7,3 +7,6 @@ edition = "2018"
 [workspace]
 members = ["workspace-mem*"]
 default-members = ["workspace-mem*"]
+
+[workspace.metadata.colcon]
+additional-packages = ["additional-pack*"]
