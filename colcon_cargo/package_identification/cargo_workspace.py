@@ -50,6 +50,14 @@ class CargoWorkspaceIdentification(PackageIdentificationExtensionPoint):
         )
         self.workspace_package_paths.update(ws_members)
 
+        workspace_metadata = content['workspace'].get('metadata', {})
+        colcon_metadata = workspace_metadata.get('colcon', {})
+        self.workspace_package_paths.update(
+            member
+            for pattern in colcon_metadata.get('additional-packages', ())
+            for member in metadata.path.glob(pattern)
+        )
+
         if 'package' not in content:
             # Prevent any further attempts to discover packages in this
             # directory and let the workspace dictate where to look for

@@ -98,10 +98,14 @@ def test_package_discovery():
             cpi.PRIORITY: {'cargo': cpi},
         })
 
-    assert len(descs) == 1
+    assert len(descs) == 2
+    descs = sorted(descs, key=lambda d: d.name)
     desc = descs.pop()
     assert desc.type == 'cargo'
     assert desc.name == 'workspace-member'
+    desc = descs.pop()
+    assert desc.type == 'cargo'
+    assert desc.name == 'additional-package'
 
 
 # Ported from Python 3.13 implementation
