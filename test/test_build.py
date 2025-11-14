@@ -27,6 +27,7 @@ import pytest
 TEST_PACKAGE_NAME = 'rust-sample-package'
 PURE_LIBRARY_PACKAGE_NAME = 'rust-pure-library'
 WORKSPACE_PACKAGE_NAME = 'rust-workspace'
+WORKSPACE_PACKAGE_VERSION = '0.1.0'
 
 test_project_path = Path(__file__).parent / TEST_PACKAGE_NAME
 pure_library_path = Path(__file__).parent / PURE_LIBRARY_PACKAGE_NAME
@@ -170,6 +171,7 @@ def test_build_and_test_package():
                                       path=str(test_project_path),
                                       build_base=str(tmpdir / 'build'),
                                       install_base=str(tmpdir / 'install'),
+                                      symlink_install=False,
                                       clean_build=None,
                                       cargo_args=None,
                                   ),
@@ -236,6 +238,7 @@ def test_skip_pure_library_package():
                                       path=str(pure_library_path),
                                       build_base=str(tmpdir / 'build'),
                                       install_base=str(tmpdir / 'install'),
+                                      symlink_install=False,
                                       clean_build=None,
                                       cargo_args=None,
                                   ),
@@ -290,6 +293,7 @@ def test_workspace_with_package():
                                       path=str(workspace_project_path),
                                       build_base=str(tmpdir / 'build'),
                                       install_base=str(tmpdir / 'install'),
+                                      symlink_install=False,
                                       clean_build=None,
                                       cargo_args=None,
                                   ),
@@ -314,6 +318,16 @@ def test_workspace_with_package():
             # This check is specifically to ensure that other workspace
             # members didn't get installed as well
             assert len(tuple((install_base / 'bin').iterdir())) == 1
+
+            # There should also be an unpacked library create
+            registry_path = install_base / 'share' / 'cargo' / 'registry'
+            crate_path = registry_path / '-'.join((
+                WORKSPACE_PACKAGE_NAME,
+                WORKSPACE_PACKAGE_VERSION,
+            ))
+            assert tuple(registry_path.iterdir()) == (crate_path,)
+            assert (crate_path / 'Cargo.toml').is_file()
+            assert (crate_path / 'src' / 'lib.rs').is_file()
 
     finally:
         event_loop.close()
