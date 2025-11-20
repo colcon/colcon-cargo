@@ -2,6 +2,7 @@ apache
 argcomplete
 asyncio
 autouse
+checksum
 colcon
 completers
 cwpd
@@ -26,6 +27,7 @@ pydocstyle
 pytest
 returncode
 rglob
+rlib
 rmtree
 rtype
 rustfmt
