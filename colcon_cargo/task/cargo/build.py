@@ -1,9 +1,11 @@
 # Copyright 2018 Easymov Robotics
 # Licensed under the Apache License, Version 2.0
 
+import glob
 import json
 from pathlib import Path
 import shutil
+import tarfile
 
 from colcon_cargo.task.cargo import CARGO_EXECUTABLE
 from colcon_core.environment import create_environment_scripts
@@ -100,8 +102,17 @@ class CargoBuildTask(TaskExtensionPoint):
 
         if self._has_libraries(metadata, pkg.name):
             self.progress('package')
-            await self._install_package(
-                metadata['packages'][0]['version'], env)
+            cmd = self._package_cmd(cargo_args)
+            rc = await run(
+                self.context, cmd, cwd=pkg.path, env=env)
+            if rc and rc.returncode:
+                return rc.returncode
+            # Now we extract the crate to have its source available locally for patching
+            # TODO(luca) check whether we really need this or we can just use the .crate file
+            # TODO(luca) remove indexing, check for return values etc.
+            crate_path = glob.glob(args.build_base + '/package/*.crate')[0]
+            crate_archive = tarfile.open(crate_path)
+            crate_archive.extractall(args.install_base + '/share/' + pkg.name + '/rust/')
 
         if not skip_hook_creation:
             create_environment_scripts(
@@ -132,6 +143,24 @@ class CargoBuildTask(TaskExtensionPoint):
             for arg in cargo_args
         ):
             cmd += ['--profile', 'dev']
+        return cmd + cargo_args
+
+    def _package_cmd(self, cargo_args):
+        args = self.context.args
+        pkg = self.context.pkg
+        # Verifying extracts and builds which could take considerable time.
+        # Instead, we skip verification and manually extract the tarfile to make it discoverable
+        # We will create the package in the build dir then extract it in the install dir
+        cmd = [
+            CARGO_EXECUTABLE,
+            'package',
+            '--quiet',
+            '--allow-dirty',
+            '--no-metadata',
+            '--no-verify',
+            '--package', pkg.name,
+            '--target-dir', args.build_base,
+        ]
         return cmd + cargo_args
 
     # Overridden by colcon-ros-cargo
@@ -227,59 +256,3 @@ class CargoBuildTask(TaskExtensionPoint):
         # If no library target exists in the whole package, then skip extracted
         # crate installation because it isn't useful.
         return False
-
-    # Determine what files would be part of a packaged crate
-    async def _get_crate_contents(self, env):
-        pkg = self.context.pkg
-        cmd = [
-            CARGO_EXECUTABLE,
-            'package',
-            '--list',
-            '--allow-dirty',
-            '--quiet',
-            '--package', pkg.name,
-        ]
-
-        rc = await run(
-            self.context,
-            cmd,
-            cwd=self.context.pkg.path,
-            capture_output=True,
-            env=env
-        )
-        if rc is None or rc.returncode != 0:
-            raise RuntimeError(
-                "Could not inspect package using 'cargo package'"
-            )
-
-        if rc.stdout is None:
-            raise RuntimeError(
-                "Failed to capture stdout from 'cargo package'"
-            )
-
-        contents = set(rc.stdout.decode().splitlines())
-        contents.difference_update({
-            # Ignore stuff that we wouldn't want to copy
-            '',
-            None,
-            'Cargo.lock',
-            'Cargo.toml.orig',
-            '.cargo_vcs_info.json',
-        })
-        return contents
-
-    async def _install_package(self, version, env):
-        contents = await self._get_crate_contents(env)
-        crate_path = Path(
-            'share', 'cargo', 'registry', f'{self.context.pkg.name}-{version}')
-
-        for file in contents:
-            dst = crate_path / file
-            install(self.context.args, file, dst)
-
-        # Cargo "directory sources" require a checksum file to be included in
-        # the package metadata (though it need not list all of the files).
-        create_file(
-            self.context.args,
-            crate_path / '.cargo-checksum.json',
-            content='{"files":{},"package":""}\n')

@@ -93,7 +93,8 @@ def extract_dependencies(package_name, content, path):
         )
     }
     return {
-        'build': depends | build_depends | dev_depends,
+         # REVERT, remove test dependency for false positive circular dep error
+        'build': depends | build_depends,
         'run': depends | build_depends,
     }
 
