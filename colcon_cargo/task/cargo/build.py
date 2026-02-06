@@ -13,6 +13,9 @@ from colcon_core.shell import create_environment_hook, get_command_environment
 from colcon_core.task import run
 from colcon_core.task import TaskExtensionPoint
 
+from pallet_patcher.command import load_and_compose
+from pallet_patcher.search import get_cargo_arguments
+
 logger = colcon_logger.getChild(__name__)
 
 
@@ -71,9 +74,28 @@ class CargoBuildTask(TaskExtensionPoint):
         # Get package metadata
         metadata = await self._get_metadata(env)
 
+        ###### Run pallet-patcher to fetch anything available in colcon's workspace
+        ###### or in our system dependencies:
+        base_path = Path(args.path)
+
+        # TO-DO: How I get this to be the path where colcon is being run? workspace root
+        if "/deps" in str(base_path.parent):
+            ws_crates_paths = [base_path.parent.parent / Path("deps")]
+        else:
+            ws_crates_paths = [base_path.parent / Path("deps")]
+
+        system_crates_paths = [Path("/usr/share/cargo/registry/")]
+        manifest_path = base_path / Path("Cargo.toml")
+        logger.info("Searching for local crates in '{ws_crates_paths}'".format_map(locals()))
+        logger.info("Searching for system crates in '{system_crates_paths}'".format_map(locals()))
+        logger.info("Searching for metadata in '{manifest_path}'".format_map(locals()))
+        composition = load_and_compose(manifest_path, ws_crates_paths, system_crates_paths)
+        crates_available_locally = get_cargo_arguments(composition)
+        logger.info("Extra crates:" + str(crates_available_locally))
+
         cargo_args = args.cargo_args
         if cargo_args is None:
-            cargo_args = []
+            cargo_args = [] + crates_available_locally
         # Invoke build step
         cmd = self._build_cmd(cargo_args)
 
@@ -125,6 +147,7 @@ class CargoBuildTask(TaskExtensionPoint):
             for arg in cargo_args
         ):
             cmd += ['--profile', 'dev']
+        logger.info(f"Build command: {cmd} and arguments: {cargo_args}")
         return cmd + cargo_args
 
     # Overridden by colcon-ros-cargo

@@ -1,0 +1,75 @@
+name: Test automatic selection of deps
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build & Test
+    runs-on: ubuntu-24.04
+
+    steps:
+
+      # Code of this repo
+      - name: Checkout this repo
+        uses: actions/checkout@v4
+        with:
+          path: root
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install pallet-patcher from dev branch
+        run: |
+          pip install git+https://github.com/cottsay/pallet-patcher.git@blast545/smarter_pallet_patcher
+          pallet-patcher -h
+
+      - name: Install colcon-cargo from this branch
+        run: |
+          cd $GITHUB_WORKSPACE/root
+          pip install .
+          pip install colcon-common-extensions
+          pip freeze
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install some Rust system crates
+        run: |
+          sudo apt-get install librust-serde-dev librust-tokio-dev librust-crc32fast-dev
+          dpkg -L librust-tokio-dev
+
+      - name: Install tokio crate as part of example
+        run: |
+          cargo install cargo-download
+          cd $GITHUB_WORKSPACE/root/test/pallet_patcher_ws/
+          mkdir -p ./deps
+          cd deps/
+          cargo download tokio > tokio.gz
+          tar -xvf tokio.gz -C ./
+          rm tokio.gz
+
+      - name: Test pallet-patcher alone before checking colcon-cargo integration
+        run: |
+          pallet-patcher --output-format toml $GITHUB_WORKSPACE/root/test/pallet_patcher_ws/deps/tokio-1.49.0/Cargo.toml $GITHUB_WORKSPACE/root/test/pallet_patcher_ws/deps
+
+      - name: colcon build example project with a tokio crate available in workspace_ws/deps
+        run: |
+          ls $GITHUB_WORKSPACE/root/
+          cd $GITHUB_WORKSPACE/root/test/pallet_patcher_ws/
+          ls
+          colcon --log-level debug build --event-handlers console_direct+
+
+      - name: Take a look to our Cargo.lock file for hello_world2
+        run: |
+          ls $GITHUB_WORKSPACE/root/test/pallet_patcher_ws/
+          ls $GITHUB_WORKSPACE/root/test/pallet_patcher_ws/hello_world2/
+          cat $GITHUB_WORKSPACE/root/test/pallet_patcher_ws/hello_world2/Cargo.lock
