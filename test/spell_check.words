@@ -13,6 +13,7 @@ easymov
 etree
 extractall
 getroot
+isnumeric
 iterdir
 linter
 localhost
@@ -53,6 +54,7 @@ tomli
 tomllib
 toprettyxml
 tostring
+unittest
 wildcards
 workspaces
 xmlstr

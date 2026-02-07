@@ -5,6 +5,7 @@ from pathlib import Path
 
 from colcon_cargo.package_identification.cargo import read_cargo_toml
 from colcon_core.dependency_descriptor import DependencyDescriptor
+from colcon_core.package_augmentation import logger
 from colcon_core.package_augmentation \
     import PackageAugmentationExtensionPoint
 from colcon_core.plugin_system import satisfies_version
@@ -122,6 +123,44 @@ def filter_dependency_list(dependencies, filter_out=None):
     return filtered_dependencies.items()
 
 
+def _next_caret(version):
+    # Drop pre-release
+    version = next(iter(version.split('-', 1)))
+    new_parts = []
+    for part in version.split('.'):
+        value = int(part)
+        if value != 0:
+            new_parts.append(str(value + 1))
+            break
+        new_parts.append(part)
+    else:
+        new_parts[-1] = '1'
+    return '.'.join(new_parts)
+
+
+def _next_tilde(version):
+    # Drop pre-release
+    version = next(iter(version.split('-', 1)))
+    parts = version.split('.', 2)
+    if len(parts) == 1:
+        return str(int(parts[0]) + 1)
+    return parts[0] + '.' + str(int(parts[1]) + 1)
+
+
+def _convert_wildcards(version):
+    while version.endswith('.*'):
+        version = version[:-2]
+    if version == '*':
+        return '>=0'
+    elif '*' in version or not version:
+        logger.warning(f"Ignoring unsupported version '{version}'")
+        return None
+    elif version[0].isnumeric():
+        return '~' + version
+    else:
+        return version
+
+
 def create_dependency_descriptor(dependency_name, constraints, path):
     """
     Create a dependency descriptor from a Cargo dependency specification.
@@ -133,6 +172,17 @@ def create_dependency_descriptor(dependency_name, constraints, path):
       resolved
     :rtype: DependencyDescriptor
     """
+    # The checking order matters, so we use tuple instead of dict
+    symbol_mappings = (
+        ('^', 'version_gte', _next_caret),
+        ('~', 'version_gte', _next_tilde),
+        ('>=', 'version_gte', None),
+        ('<=', 'version_lte', None),
+        ('=', 'version_eq', None),
+        ('>', 'version_gt', None),
+        ('<', 'version_lt', None),
+    )
+
     if isinstance(constraints, dict):
         dep_path = constraints.get('path')
         if dep_path:
@@ -141,12 +191,32 @@ def create_dependency_descriptor(dependency_name, constraints, path):
         else:
             source = constraints.get('git') or \
                 constraints.get('registry')
+        versions = constraints.get('version')
     else:
         source = None
+        versions = constraints
+
     metadata = {
         'origin': 'cargo',
         'cargo_source': source,
     }
-    # TODO: Interpret SemVer constraints and add appropriate constraint
-    #       metadata. Handling arbitrary wildcards will be non-trivial.
+    for version in (versions or '').split(','):
+        # Ignore version metadata during comparison
+        version = next(iter(version.split('+', 1))).strip()
+        if '*' in version:
+            version = _convert_wildcards(version)
+        if not version:
+            continue
+        for symbol, mapping, version_lt in symbol_mappings:
+            if version.startswith(symbol):
+                version = version[len(symbol):].lstrip()
+                metadata[mapping] = version
+                if version_lt:
+                    metadata['version_lt'] = version_lt(version)
+                break
+        else:
+            # Bare versions are the same as caret
+            metadata['version_gte'] = version
+            metadata['version_lt'] = _next_caret(version)
+
     return DependencyDescriptor(dependency_name, metadata=metadata)
