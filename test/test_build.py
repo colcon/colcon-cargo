@@ -159,8 +159,10 @@ def test_build_and_test_package():
 
     try:
         cpi = CargoPackageIdentification()
+        aug = CargoPackageAugmentation()
         package = PackageDescriptor(test_project_path)
         cpi.identify(package)
+        aug.augment_package(package)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
@@ -225,8 +227,10 @@ def test_skip_pure_library_package():
 
     try:
         cpi = CargoPackageIdentification()
+        aug = CargoPackageAugmentation()
         package = PackageDescriptor(pure_library_path)
         cpi.identify(package)
+        aug.augment_package(package)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
@@ -277,8 +281,10 @@ def test_workspace_with_package():
 
     try:
         cpi = CargoPackageIdentification()
+        aug = CargoPackageAugmentation()
         package = PackageDescriptor(workspace_project_path)
         cpi.identify(package)
+        aug.augment_package(package)
 
         assert package.name == WORKSPACE_PACKAGE_NAME
 

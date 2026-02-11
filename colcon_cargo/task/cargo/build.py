@@ -4,6 +4,7 @@
 import json
 from pathlib import Path
 import shutil
+import tarfile
 
 from colcon_cargo.task.cargo import CARGO_EXECUTABLE
 from colcon_core.environment import create_environment_scripts
@@ -68,6 +69,9 @@ class CargoBuildTask(TaskExtensionPoint):
         if CARGO_EXECUTABLE is None:
             raise RuntimeError("Could not find 'cargo' executable")
 
+        # Normalize and isolate the manifest
+        self._stage = await self._stage_crate(env)
+
         # Get package metadata
         metadata = await self._get_metadata(env)
 
@@ -112,12 +116,11 @@ class CargoBuildTask(TaskExtensionPoint):
     # Overridden by colcon-ros-cargo
     def _build_cmd(self, cargo_args):
         args = self.context.args
-        pkg = self.context.pkg
         cmd = [
             CARGO_EXECUTABLE,
             'build',
             '--quiet',
-            '--package', pkg.name,
+            '--manifest-path', str(self._stage / 'Cargo.toml'),
             '--target-dir', args.build_base,
         ]
         if not any(
@@ -136,7 +139,7 @@ class CargoBuildTask(TaskExtensionPoint):
             '--force',
             '--quiet',
             '--locked',
-            '--path', '.',
+            '--path', str(self._stage),
             '--root', args.install_base,
             '--target-dir', args.build_base,
             '--no-track',
@@ -152,6 +155,7 @@ class CargoBuildTask(TaskExtensionPoint):
         cmd = [
             CARGO_EXECUTABLE,
             'metadata',
+            '--manifest-path', str(self._stage / 'Cargo.toml'),
             '--no-deps',
             '--format-version', '1',
         ]
@@ -177,6 +181,41 @@ class CargoBuildTask(TaskExtensionPoint):
             )
 
         return json.loads(rc.stdout)
+
+    async def _stage_crate(self, env):
+        args = self.context.args
+        pkg = self.context.pkg
+        cmd = [
+            CARGO_EXECUTABLE,
+            'package',
+            '--quiet',
+            '--package', pkg.name,
+            '--target-dir', args.build_base,
+            '--allow-dirty',
+            '--exclude-lockfile',
+            '--no-metadata',
+            '--no-verify',
+            '--offline',
+        ]
+        rc = await run(
+            self.context,
+            cmd,
+            cwd=pkg.path,
+            env=env
+        )
+        if rc is None or rc.returncode != 0:
+            raise RuntimeError(
+                "Failed to stage the crate using 'cargo package'"
+            )
+
+        build_dir = Path(args.build_base)
+        crate_version = pkg.metadata['version']
+        crate_name = f'{pkg.name}-{crate_version}.crate'
+        crate_path = build_dir / 'package' / crate_name
+
+        with tarfile.open(crate_path, 'r') as crate:
+            crate.extractall(build_dir / 'stage')
+        return build_dir / 'stage' / f'{pkg.name}-{crate_version}'
 
     # Identify if there are any binaries to install for the current package
     @staticmethod

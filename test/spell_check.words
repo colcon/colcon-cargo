@@ -10,10 +10,12 @@ deps
 descs
 easymov
 etree
+extractall
 getroot
 iterdir
 linter
 localhost
+lockfile
 lstrip
 luca
 minidom
@@ -34,6 +36,7 @@ setuptools
 skipif
 staticmethod
 symlink
+tarfile
 tempdir
 tempfile
 testcase
