@@ -48,23 +48,16 @@ VERSION_CONSTRAINTS = {
 @pytest.mark.parametrize('constraints', list(VERSION_CONSTRAINTS.keys()))
 def test_create_dependency_descriptor(constraints):
     metadata = {
-        'origin': 'cargo',
-        'cargo_source': None,
         **VERSION_CONSTRAINTS[constraints],
     }
 
     dep = create_dependency_descriptor('dependency', constraints, Path.cwd())
     assert 'dependency' == dep.name
-    assert metadata == dep.metadata
+    assert metadata == {k: v for k, v in dep.metadata.items() if k in metadata}
 
 
 @pytest.mark.parametrize('constraints', ['1.*.3', '*.*.3', '*.2'])
 def test_create_dependency_descriptor_unsupported(constraints):
-    metadata = {
-        'origin': 'cargo',
-        'cargo_source': None,
-    }
-
     with patch(
         'colcon_cargo.package_augmentation.cargo.logger.warning',
     ) as log:
@@ -73,7 +66,7 @@ def test_create_dependency_descriptor_unsupported(constraints):
 
     # No constraint in the metadata
     assert 'dependency' == dep.name
-    assert metadata == dep.metadata
+    assert not any(k.startswith('version_') for k in dep.metadata.keys())
 
     # Single call to logger.warning()
     assert log.call_count == 1

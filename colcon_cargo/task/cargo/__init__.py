@@ -34,7 +34,9 @@ def _get_ordered_crate_paths(dependency_paths=None):
     ]
 
 
-def get_patch_args(path, dependency_paths=None, *, env=None):
+def get_patch_args(
+    path, dependency_paths=None, *, search_paths=None, env=None
+):
     if env is None:
         env = os.environ
 
@@ -48,8 +50,9 @@ def get_patch_args(path, dependency_paths=None, *, env=None):
     ]
 
     crate_paths = _get_ordered_crate_paths(dependency_paths)
+    crate_paths.extend(search_paths or ())
 
-    composition = compose(dependencies, crate_paths)
+    composition = compose(dependencies, crate_paths, seeds=[path])
     default_registry = env.get('CARGO_REGISTRY_DEFAULT') or 'crates-io'
     return get_cargo_arguments(composition, default_registry)
 

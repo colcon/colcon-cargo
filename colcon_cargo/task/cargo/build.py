@@ -1,6 +1,7 @@
 # Copyright 2018 Easymov Robotics
 # Licensed under the Apache License, Version 2.0
 
+from collections import OrderedDict
 import json
 from pathlib import Path
 import shutil
@@ -8,6 +9,7 @@ import tarfile
 
 from colcon_cargo.task.cargo import CARGO_EXECUTABLE
 from colcon_cargo.task.cargo import get_patch_args
+from colcon_core.dependency_descriptor import DependencyDescriptor
 from colcon_core.environment import create_environment_scripts
 from colcon_core.logging import colcon_logger
 from colcon_core.plugin_system import satisfies_version
@@ -15,9 +17,18 @@ from colcon_core.shell import create_environment_hook, get_command_environment
 from colcon_core.task import create_file
 from colcon_core.task import install
 from colcon_core.task import run
+from colcon_core.task import TaskContext
 from colcon_core.task import TaskExtensionPoint
 
 logger = colcon_logger.getChild(__name__)
+
+
+class _BuildOnlyTaskContext(TaskContext):
+    pass
+
+
+class _PackageOnlyTaskContext(TaskContext):
+    pass
 
 
 class CargoBuildTask(TaskExtensionPoint):
@@ -25,7 +36,7 @@ class CargoBuildTask(TaskExtensionPoint):
 
     def __init__(self):  # noqa: D107
         super().__init__()
-        satisfies_version(TaskExtensionPoint.EXTENSION_POINT_VERSION, '^1.0')
+        satisfies_version(TaskExtensionPoint.EXTENSION_POINT_VERSION, '^1.1')
 
     def add_arguments(self, *, parser):  # noqa: D102
         parser.add_argument(
@@ -38,12 +49,101 @@ class CargoBuildTask(TaskExtensionPoint):
             '--clean-build',
             action='store_true',
             help='Remove old build dir before the build.')
+        parser.add_argument(
+            '--additional-crate-paths', type=Path,
+            nargs='*', metavar='REGISTRY_DIR')
+
+    @classmethod
+    def create_contexts(cls, *, pkg, args, dependencies):  # noqa: D102
+        self_dep = DependencyDescriptor(
+            pkg.name + '(crate)',
+            metadata={'origin': 'cargo'},
+            package_name=pkg.name)
+
+        suffixed_dependencies = OrderedDict(((self_dep, args.install_base),))
+        for dep, path in dependencies.items():
+            if dep.metadata.get('origin') == 'cargo':
+                dep = DependencyDescriptor(
+                    dep.name + '(crate)',
+                    metadata=dep.metadata,
+                    package_name=dep.name)
+            suffixed_dependencies[dep] = path
+
+        return {
+            self_dep.name: _PackageOnlyTaskContext(
+                pkg=pkg, args=args,
+                dependencies={}),
+            pkg.name: _BuildOnlyTaskContext(
+                pkg=pkg, args=args,
+                dependencies=suffixed_dependencies),
+        }
 
     async def build(  # noqa: D102
         self, *, additional_hooks=None, skip_hook_creation=False
     ):
         if additional_hooks is None:
             additional_hooks = []
+
+        res = None
+        if not isinstance(self.context, (_BuildOnlyTaskContext,)):
+            res = await self._package(
+                additional_hooks=additional_hooks,
+                skip_hook_creation=skip_hook_creation)
+
+        if (
+            not res and
+            not isinstance(self.context, (_PackageOnlyTaskContext,))
+        ):
+            res = await self._build(
+                additional_hooks=additional_hooks,
+                skip_hook_creation=skip_hook_creation)
+
+        return res
+
+    async def _package(
+        self, *, additional_hooks=None, skip_hook_creation=False
+    ):
+        args = self.context.args
+
+        logger.info(
+            "Packaging Cargo package in '{args.path}'".format_map(locals()))
+
+        try:
+            env = await get_command_environment('package', args.build_base, {})
+        except RuntimeError as e:
+            logger.error(str(e))
+            return 1
+
+        # Clean up the build dir
+        build_dir = Path(args.build_base)
+        if args.clean_build:
+            if build_dir.is_symlink():
+                build_dir.unlink()
+            elif build_dir.exists():
+                shutil.rmtree(build_dir)
+
+        if CARGO_EXECUTABLE is None:
+            raise RuntimeError("Could not find 'cargo' executable")
+
+        # Normalize and isolate the manifest
+        self._stage = await self._stage_crate(env)
+
+        # Get package metadata
+        metadata = await self._get_metadata(env)
+
+        pkg = self.context.pkg
+        if self._has_libraries(metadata, pkg.name):
+            self.progress('package')
+            await self._install_package(
+                metadata['packages'][0]['version'], env)
+
+        if not skip_hook_creation:
+            create_environment_scripts(
+                pkg, args, additional_hooks=additional_hooks)
+
+    async def _build(
+        self, *, additional_hooks=None, skip_hook_creation=False
+    ):
         args = self.context.args
 
         logger.info(
@@ -79,9 +179,10 @@ class CargoBuildTask(TaskExtensionPoint):
         metadata = await self._get_metadata(env)
 
         # Patch dependencies
-        dependency_paths = self.context.dependencies.values()
         patch_args = get_patch_args(
-            self.context.pkg.path, dependency_paths, env=env)
+            self._stage, self.context.dependencies.values(),
+            search_paths=args.additional_crate_paths,
+            env=env)
 
         cargo_args = args.cargo_args
         if cargo_args is None:
@@ -109,11 +210,6 @@ class CargoBuildTask(TaskExtensionPoint):
             if rc and rc.returncode:
                 return rc.returncode
 
-        if self._has_libraries(metadata, pkg.name):
-            self.progress('package')
-            await self._install_package(
-                metadata['packages'][0]['version'], env, patch_args)
-
         if not skip_hook_creation:
             create_environment_scripts(
                 pkg, args, additional_hooks=additional_hooks)
@@ -130,12 +226,13 @@ class CargoBuildTask(TaskExtensionPoint):
     # Overridden by colcon-ros-cargo
     def _build_cmd(self, cargo_args):
         args = self.context.args
+        build_dir = Path(args.build_base) / '..' / '.cargo_target'
         cmd = [
             CARGO_EXECUTABLE,
             'build',
             '--quiet',
             '--manifest-path', str(self._stage / 'Cargo.toml'),
-            '--target-dir', args.build_base,
+            '--target-dir', str(build_dir),
         ]
         if not any(
             arg == '--profile' or arg.startswith('--profile=')
@@ -147,6 +244,7 @@ class CargoBuildTask(TaskExtensionPoint):
     # Overridden by colcon-ros-cargo
     def _install_cmd(self, cargo_args):
         args = self.context.args
+        build_dir = Path(args.build_base) / '..' / '.cargo_target'
         cmd = [
             CARGO_EXECUTABLE,
             'install',
@@ -155,7 +253,7 @@ class CargoBuildTask(TaskExtensionPoint):
             '--locked',
             '--path', str(self._stage),
             '--root', args.install_base,
-            '--target-dir', args.build_base,
+            '--target-dir', str(build_dir),
             '--no-track',
         ]
         if not any(
@@ -199,12 +297,13 @@ class CargoBuildTask(TaskExtensionPoint):
     async def _stage_crate(self, env):
         args = self.context.args
         pkg = self.context.pkg
+        build_dir = Path(args.build_base) / '..' / '.cargo_target'
         cmd = [
             CARGO_EXECUTABLE,
             'package',
             '--quiet',
             '--package', pkg.name,
-            '--target-dir', args.build_base,
+            '--target-dir', str(build_dir),
             '--allow-dirty',
             '--exclude-lockfile',
             '--no-metadata',
@@ -225,7 +324,8 @@ class CargoBuildTask(TaskExtensionPoint):
         build_dir = Path(args.build_base)
         crate_version = pkg.metadata['version']
         crate_name = f'{pkg.name}-{crate_version}.crate'
-        crate_path = build_dir / 'package' / crate_name
+        target_path = build_dir / '..' / '.cargo_target'
+        crate_path = target_path / 'package' / crate_name
 
         with tarfile.open(crate_path, 'r') as crate:
             crate.extractall(build_dir / 'stage')
@@ -277,15 +377,21 @@ class CargoBuildTask(TaskExtensionPoint):
         return False
 
     # Determine what files would be part of a packaged crate
-    async def _get_crate_contents(self, env, cargo_args):
+    async def _get_crate_contents(self, env):
+        pkg = self.context.pkg
         cmd = [
             CARGO_EXECUTABLE,
             'package',
-            '--list',
-            '--allow-dirty',
             '--quiet',
-            '--manifest-path', str(self._stage / 'Cargo.toml')
-        ] + cargo_args
+            '--package', pkg.name,
+            '--allow-dirty',
+            '--exclude-lockfile',
+            '--no-metadata',
+            '--no-verify',
+            '--offline',
+            '--manifest-path', str(self._stage / 'Cargo.toml'),
+            '--list',
+        ]
 
         rc = await run(
             self.context,
@@ -316,8 +422,8 @@ class CargoBuildTask(TaskExtensionPoint):
         })
         return contents
 
-    async def _install_package(self, version, env, cargo_args):
-        contents = await self._get_crate_contents(env, cargo_args)
+    async def _install_package(self, version, env):
+        contents = await self._get_crate_contents(env)
         crate_path = Path(
             'share', 'cargo', 'registry', f'{self.context.pkg.name}-{version}')
 

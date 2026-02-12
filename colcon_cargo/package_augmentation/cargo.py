@@ -92,6 +92,7 @@ def extract_dependencies(package_name, content, path):
             content.get('dev-dependencies', {}).items(),
             filter_out=package_name,
         )
+        if True or not isinstance(v, dict) or not v.get('path')
     }
     return {
         'build': depends | build_depends | dev_depends,
@@ -199,6 +200,8 @@ def create_dependency_descriptor(dependency_name, constraints, path):
     metadata = {
         'origin': 'cargo',
         'cargo_source': source,
+        'out_of_band': True,
+        'skip_incompatible': True,
     }
     for version in (versions or '').split(','):
         # Ignore version metadata during comparison
