@@ -7,6 +7,7 @@ import shutil
 
 from colcon_cargo.task.cargo import CARGO_EXECUTABLE
 from colcon_core.environment import create_environment_scripts
+from colcon_core.feature_flags import is_feature_flag_set
 from colcon_core.logging import colcon_logger
 from colcon_core.plugin_system import satisfies_version
 from colcon_core.shell import create_environment_hook, get_command_environment
@@ -58,12 +59,18 @@ class CargoBuildTask(TaskExtensionPoint):
             return rc
 
         # Clean up the build dir
-        build_dir = Path(args.build_base)
-        if args.clean_build:
-            if build_dir.is_symlink():
-                build_dir.unlink()
-            elif build_dir.exists():
-                shutil.rmtree(build_dir)
+        self._build_dir = Path(args.build_base)
+        if is_feature_flag_set('shared_cargo_target_dir'):
+            self._build_dir = self._build_dir.parent / '.cargo_target'
+            if args.clean_build:
+                logger.warning(
+                    "The '--clean-build' argument has no effect when using "
+                    "'shared_cargo_target_dir'")
+        elif args.clean_build:
+            if self._build_dir.is_symlink():
+                self._build_dir.unlink()
+            elif self._build_dir.exists():
+                shutil.rmtree(self._build_dir)
 
         if CARGO_EXECUTABLE is None:
             raise RuntimeError("Could not find 'cargo' executable")
@@ -111,14 +118,13 @@ class CargoBuildTask(TaskExtensionPoint):
 
     # Overridden by colcon-ros-cargo
     def _build_cmd(self, cargo_args):
-        args = self.context.args
         pkg = self.context.pkg
         cmd = [
             CARGO_EXECUTABLE,
             'build',
             '--quiet',
             '--package', pkg.name,
-            '--target-dir', args.build_base,
+            '--target-dir', str(self._build_dir),
         ]
         if not any(
             arg == '--profile' or arg.startswith('--profile=')
@@ -138,7 +144,7 @@ class CargoBuildTask(TaskExtensionPoint):
             '--locked',
             '--path', '.',
             '--root', args.install_base,
-            '--target-dir', args.build_base,
+            '--target-dir', str(self._build_dir),
             '--no-track',
         ]
         if not any(
