@@ -87,12 +87,11 @@ def extract_dependencies(package_name, content, path):
         )
     }
     dev_depends = {
-        create_dependency_descriptor(k, v, path)
+        create_dependency_descriptor(k, v, path, True)
         for k, v in filter_dependency_list(
             content.get('dev-dependencies', {}).items(),
             filter_out=package_name,
         )
-        if True or not isinstance(v, dict) or not v.get('path')
     }
     return {
         'build': depends | build_depends | dev_depends,
@@ -162,7 +161,9 @@ def _convert_wildcards(version):
         return version
 
 
-def create_dependency_descriptor(dependency_name, constraints, path):
+def create_dependency_descriptor(
+    dependency_name, constraints, path, out_of_band=False
+):
     """
     Create a dependency descriptor from a Cargo dependency specification.
 
@@ -171,6 +172,7 @@ def create_dependency_descriptor(dependency_name, constraints, path):
       a dict
     :param path: The directory from where relative paths should be
       resolved
+    :param out_of_band: True if the dependency is not a prerequisite
     :rtype: DependencyDescriptor
     """
     # The checking order matters, so we use tuple instead of dict
@@ -200,7 +202,7 @@ def create_dependency_descriptor(dependency_name, constraints, path):
     metadata = {
         'origin': 'cargo',
         'cargo_source': source,
-        'out_of_band': True,
+        'out_of_band': out_of_band,
         'skip_incompatible': True,
     }
     for version in (versions or '').split(','):

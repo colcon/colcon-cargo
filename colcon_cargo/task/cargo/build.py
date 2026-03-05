@@ -9,6 +9,7 @@ import tarfile
 
 from colcon_cargo.task.cargo import CARGO_EXECUTABLE
 from colcon_cargo.task.cargo import get_patch_args
+from colcon_core.argument_type import get_cwd_path_resolver
 from colcon_core.dependency_descriptor import DependencyDescriptor
 from colcon_core.environment import create_environment_scripts
 from colcon_core.logging import colcon_logger
@@ -50,7 +51,7 @@ class CargoBuildTask(TaskExtensionPoint):
             action='store_true',
             help='Remove old build dir before the build.')
         parser.add_argument(
-            '--additional-crate-paths', type=Path,
+            '--additional-crate-paths', type=get_cwd_path_resolver(),
             nargs='*', metavar='REGISTRY_DIR')
 
     @classmethod
@@ -179,10 +180,10 @@ class CargoBuildTask(TaskExtensionPoint):
         metadata = await self._get_metadata(env)
 
         # Patch dependencies
+        search_paths = [Path(path) for path in args.additional_crate_paths]
         patch_args = get_patch_args(
             self._stage, self.context.dependencies.values(),
-            search_paths=args.additional_crate_paths,
-            env=env)
+            search_paths=search_paths, env=env)
 
         cargo_args = args.cargo_args
         if cargo_args is None:
