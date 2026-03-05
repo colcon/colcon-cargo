@@ -176,6 +176,7 @@ def test_build_and_test_package():
                                       symlink_install=False,
                                       clean_build=None,
                                       cargo_args=None,
+                                      additional_crate_paths=[],
                                   ),
                                   dependencies={}
                                   )
@@ -245,6 +246,7 @@ def test_skip_pure_library_package():
                                       symlink_install=False,
                                       clean_build=None,
                                       cargo_args=None,
+                                      additional_crate_paths=[],
                                   ),
                                   dependencies={}
                                   )
@@ -302,6 +304,7 @@ def test_workspace_with_package():
                                       symlink_install=False,
                                       clean_build=None,
                                       cargo_args=None,
+                                      additional_crate_paths=[],
                                   ),
                                   dependencies={}
                                   )
