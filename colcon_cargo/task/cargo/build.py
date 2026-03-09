@@ -180,7 +180,9 @@ class CargoBuildTask(TaskExtensionPoint):
         metadata = await self._get_metadata(env)
 
         # Patch dependencies
-        search_paths = [Path(path) for path in args.additional_crate_paths]
+        search_paths = [
+            Path(path) for path in args.additional_crate_paths or ()
+        ]
         patch_args = get_patch_args(
             self._stage, self.context.dependencies.values(),
             search_paths=search_paths, env=env)
