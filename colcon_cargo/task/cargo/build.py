@@ -333,7 +333,9 @@ class CargoBuildTask(TaskExtensionPoint):
         with tarfile.open(crate_path, 'r') as crate:
             crate.extractall(build_dir / 'stage')
         stage = build_dir / 'stage' / f'{pkg.name}-{crate_version}'
-        (stage / 'Cargo.toml.orig').unlink(missing_ok=True)
+        manifest_orig = stage / 'Cargo.toml.orig'
+        if manifest_orig.exists():
+            manifest_orig.unlink()
         return stage
 
     # Identify if there are any binaries to install for the current package
