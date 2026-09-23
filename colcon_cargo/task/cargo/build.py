@@ -9,13 +9,28 @@ from colcon_cargo.task.cargo import CARGO_EXECUTABLE
 from colcon_core.environment import create_environment_scripts
 from colcon_core.logging import colcon_logger
 from colcon_core.plugin_system import satisfies_version
-from colcon_core.shell import create_environment_hook, get_command_environment
+from colcon_core.shell import create_environment_hook
+from colcon_core.shell import find_installed_packages_in_environment
+from colcon_core.shell import get_command_environment
 from colcon_core.task import create_file
 from colcon_core.task import install
 from colcon_core.task import run
 from colcon_core.task import TaskExtensionPoint
+from pallet_patcher.command import load_and_compose
+from pallet_patcher.search import get_cargo_arguments
 
 logger = colcon_logger.getChild(__name__)
+
+
+def _get_upstream_crate_paths(dependency_paths=None):
+    prefix_paths = list(dependency_paths or ())
+    for pkg_path in find_installed_packages_in_environment().values():
+        if pkg_path not in prefix_paths:
+            prefix_paths.append(pkg_path)
+    return [
+        Path(prefix) / 'share' / 'cargo' / 'registry'
+        for prefix in prefix_paths
+    ]
 
 
 class CargoBuildTask(TaskExtensionPoint):
@@ -73,9 +88,24 @@ class CargoBuildTask(TaskExtensionPoint):
         # Get package metadata
         metadata = await self._get_metadata(env)
 
+        # Run pallet-patcher to fetch anything available in colcon's workspace
+        # or in our system dependencies:
+        base_path = Path(args.path)
+        dependency_paths = _get_upstream_crate_paths(
+            self.context.dependencies.values())
+        system_crates_path = Path('/usr/share/cargo/registry/')
+        ws_crates_paths = [base_path, *dependency_paths, system_crates_path]
+
+        manifest_path = base_path / Path('Cargo.toml')
+        logger.info("Search crates: '{ws_crates_paths}'".format_map(locals()))
+        logger.info("Search metadata: '{manifest_path}'".format_map(locals()))
+        composition = load_and_compose(manifest_path, ws_crates_paths)
+        crates_available_locally = get_cargo_arguments(composition)
+        logger.info('Extra crates:' + str(crates_available_locally))
+
         cargo_args = args.cargo_args
         if cargo_args is None:
-            cargo_args = []
+            cargo_args = [] + crates_available_locally
         # Invoke build step
         cmd = self._build_cmd(cargo_args)
 
@@ -101,7 +131,8 @@ class CargoBuildTask(TaskExtensionPoint):
         if self._has_libraries(metadata, pkg.name):
             self.progress('package')
             await self._install_package(
-                metadata['packages'][0]['version'], env)
+                metadata['packages'][0]['version'], env,
+                crates_available_locally)
 
         if not skip_hook_creation:
             create_environment_scripts(
@@ -132,6 +163,7 @@ class CargoBuildTask(TaskExtensionPoint):
             for arg in cargo_args
         ):
             cmd += ['--profile', 'dev']
+        logger.info(f'Build command: {cmd} and arguments: {cargo_args}')
         return cmd + cargo_args
 
     # Overridden by colcon-ros-cargo
@@ -229,7 +261,7 @@ class CargoBuildTask(TaskExtensionPoint):
         return False
 
     # Determine what files would be part of a packaged crate
-    async def _get_crate_contents(self, env):
+    async def _get_crate_contents(self, env, cargo_args):
         pkg = self.context.pkg
         cmd = [
             CARGO_EXECUTABLE,
@@ -238,7 +270,7 @@ class CargoBuildTask(TaskExtensionPoint):
             '--allow-dirty',
             '--quiet',
             '--package', pkg.name,
-        ]
+        ] + cargo_args
 
         rc = await run(
             self.context,
@@ -268,8 +300,8 @@ class CargoBuildTask(TaskExtensionPoint):
         })
         return contents
 
-    async def _install_package(self, version, env):
-        contents = await self._get_crate_contents(env)
+    async def _install_package(self, version, env, cargo_args):
+        contents = await self._get_crate_contents(env, cargo_args)
         crate_path = Path(
             'share', 'cargo', 'registry', f'{self.context.pkg.name}-{version}')
 
